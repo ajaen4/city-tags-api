@@ -1,0 +1,44 @@
+basePath: /api/v0
+definitions:
+  server.ErrorResp:
+    properties:
+      message:
+        example: internal server error
+        type: string
+    type: object
+host: city-tags-api.com
+info:
+  contact:
+    email: a.jaenrev@gmail.com
+    name: City Tags API Support
+  description: This is an API that makes available different tags for worlwide cities
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: City Tags API
+  version: 0.0.1
+paths:
+  /test:
+    get:
+      consumes:
+      - application/json
+      description: Test handler
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.ErrorResp'
+      summary: Test handler
+securityDefinitions:
+  ApiKeyAuth:
+    description: Authorization to access the API endpoints
+    in: header
+    name: Authorization
+    type: apiKey
+  BasicAuth:
+    type: basic
+swagger: "2.0"

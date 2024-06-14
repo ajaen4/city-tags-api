@@ -1,16 +1,44 @@
-# Simple Makefile for a Go project
+.PHONY: all build run test clean docs migrations setup
 
-# Build the application
+include .env
+
+setup:
+	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=require)
+
 all: build
 
-build:
-	@echo "Building..."
-	
-	@go build -o main cmd/api/main.go
+build:	
+	@go build -o ./bin/main cmd/api/main.go
 
-# Run the application
 run:
-	@go run cmd/api/main.go
+	make docs
+	air
+
+docs:
+	if [ -d docs/ ]; then rm -r docs/; fi && swag init --dir ./cmd/api,./internal/server
+
+open-db-conn: setup
+	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)
+
+init-db: setup
+	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME) -f ./init_db/init_queries.sql
+
+create-migration: setup
+	@if [ -z "$(MIGRATION_NAME)" ]; then \
+		echo "Error: MIGRATION_NAME is not set"; \
+		exit 1; \
+	fi
+	@echo "Creating migration: $(MIGRATION_NAME)"
+	@goose -dir $(GOOSE_MIGRATION_DIR) create $(MIGRATION_NAME) sql
+
+run-migrations: setup
+	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" up
+
+reset-migrations: setup
+	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" reset
+
+migrations-status: setup
+	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
 
 # Create DB container
 docker-run:
@@ -56,5 +84,3 @@ watch:
 	        exit 1; \
 	    fi; \
 	fi
-
-.PHONY: all build run test clean

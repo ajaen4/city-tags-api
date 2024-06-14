@@ -26,4 +26,7 @@ tmp/
 .env
 
 # Project build
-main
+bin
+
+# Init db data
+init_db/data/

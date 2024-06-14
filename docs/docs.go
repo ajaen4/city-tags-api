@@ -24,22 +24,25 @@ const docTemplate = `{
     "paths": {
         "/test": {
             "get": {
-                "description": "Test handler",
+                "description": "Get city information by providing a specific city id",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "text/plain"
+                    "application/json"
                 ],
-                "summary": "Test handler",
+                "summary": "Get city by city id",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.getCityResp"
+                        }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/server.ErrorResp"
+                            "$ref": "#/definitions/api_errors.ClientErr"
                         }
                     }
                 }
@@ -47,12 +50,37 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "server.ErrorResp": {
+        "api_errors.ClientErr": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "message": {
-                    "type": "string",
-                    "example": "internal server error"
+                    "type": "string"
+                }
+            }
+        },
+        "server.getCityResp": {
+            "type": "object",
+            "properties": {
+                "city_id": {
+                    "type": "integer"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "continent": {
+                    "type": "string"
+                },
+                "country_3_code": {
+                    "type": "string"
                 }
             }
         }

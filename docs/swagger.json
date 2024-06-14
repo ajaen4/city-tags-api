@@ -1,0 +1,65 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is an API that makes available different tags for worlwide cities",
+        "title": "City Tags API",
+        "contact": {
+            "name": "City Tags API Support",
+            "email": "a.jaenrev@gmail.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "0.0.1"
+    },
+    "host": "city-tags-api.com",
+    "basePath": "/api/v0",
+    "paths": {
+        "/test": {
+            "get": {
+                "description": "Test handler",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "summary": "Test handler",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.ErrorResp"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "server.ErrorResp": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "internal server error"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "Authorization to access the API endpoints",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "BasicAuth": {
+            "type": "basic"
+        }
+    }
+}

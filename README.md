@@ -7,3 +7,4 @@ API to be able to consume tags on cities, for example if the humidity is "modera
 - psql
 - goose
 - air
+- swag

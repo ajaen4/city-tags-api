@@ -1,9 +1,25 @@
 basePath: /api/v0
 definitions:
-  server.ErrorResp:
+  api_errors.ClientErr:
     properties:
+      code:
+        type: integer
+      errors:
+        additionalProperties:
+          type: string
+        type: object
       message:
-        example: internal server error
+        type: string
+    type: object
+  server.getCityResp:
+    properties:
+      city_id:
+        type: integer
+      city_name:
+        type: string
+      continent:
+        type: string
+      country_3_code:
         type: string
     type: object
 host: city-tags-api.com
@@ -22,17 +38,19 @@ paths:
     get:
       consumes:
       - application/json
-      description: Test handler
+      description: Get city information by providing a specific city id
       produces:
-      - text/plain
+      - application/json
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/server.getCityResp'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/server.ErrorResp'
-      summary: Test handler
+            $ref: '#/definitions/api_errors.ClientErr'
+      summary: Get city by city id
 securityDefinitions:
   ApiKeyAuth:
     description: Authorization to access the API endpoints

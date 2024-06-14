@@ -1,38 +1,38 @@
 package server
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
+
+	_ "city-tags-api/docs"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func (s *Server) RegisterRoutes() http.Handler {
+func (s *Api) RegisterRoutes() *chi.Mux {
 	r := chi.NewRouter()
+
+	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Logger)
 
-	r.Get("/", s.HelloWorldHandler)
-
-	r.Get("/health", s.healthHandler)
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	r.Get("/test", testHandler)
 
 	return r
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
-
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
-	}
-
-	_, _ = w.Write(jsonResp)
+type ErrorResp struct {
+	Message string `json:"message" example:"internal server error"`
 }
 
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	jsonResp, _ := json.Marshal(s.db.Health())
-	_, _ = w.Write(jsonResp)
+// @Summary		Test handler
+// @Description	Test handler
+// @Accept			json
+// @Produce		text/plain
+// @Success		200
+// @Failure      500  {object} ErrorResp
+// @Router			/test [get]
+func testHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("pong"))
 }

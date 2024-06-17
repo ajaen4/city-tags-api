@@ -1,0 +1,5 @@
+name: city-tags-api
+runtime: go
+description: API to be able to consume tags on cities
+globalTags:
+  project_name: "city-tags-api"

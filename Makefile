@@ -8,7 +8,7 @@ setup:
 all: build
 
 build:	
-	@go build -o ./bin/main cmd/api/main.go
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main cmd/api/main.go
 
 run:
 	make docs
@@ -31,6 +31,7 @@ create-migration: setup
 	@echo "Creating migration: $(MIGRATION_NAME)"
 	@goose -dir $(GOOSE_MIGRATION_DIR) create $(MIGRATION_NAME) sql
 
+# GOOSE_DBSTRING must have "" around it so the make file interprets correctly certain special characters
 run-migrations: setup
 	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" up
 
@@ -40,23 +41,12 @@ reset-migrations: setup
 migrations-status: setup
 	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
 
-# Create DB container
-docker-run:
-	@if docker compose up 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker-compose up; \
-	fi
+docker-run: setup
+	docker build -t city-tags-api .
+	docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) city-tags-api
 
-# Shutdown DB container
 docker-down:
-	@if docker compose down 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker-compose down; \
-	fi
+	docker rm city-tags-api
 
 # Test the application
 test:
@@ -66,21 +56,4 @@ test:
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -f main
-
-# Live Reload
-watch:
-	@if command -v air > /dev/null; then \
-	    air; \
-	    echo "Watching...";\
-	else \
-	    read -p "Go's 'air' is not installed on your machine. Do you want to install it? [Y/n] " choice; \
-	    if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
-	        go install github.com/cosmtrek/air@latest; \
-	        air; \
-	        echo "Watching...";\
-	    else \
-	        echo "You chose not to install air. Exiting..."; \
-	        exit 1; \
-	    fi; \
-	fi
+	@rm -f bin/main

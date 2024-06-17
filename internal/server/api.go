@@ -49,7 +49,7 @@ func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
 	cityId, err := strconv.Atoi(cityIdParam)
 	if cityIdParam == "" || err != nil {
 		return &api_errors.ClientErr{
-			HttpCode: http.StatusBadGateway,
+			HttpCode: http.StatusBadRequest,
 			Message:  "cityId parameter not present or invalid",
 		}
 	}
@@ -72,6 +72,6 @@ func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	respondWithJSON(w, http.StatusBadRequest, cityData)
+	respondWithJSON(w, http.StatusOK, cityData)
 	return nil
 }

@@ -1,5 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
+CREATE SCHEMA city_tags;
+
 CREATE TABLE city_tags.cities (
     city_id INT PRIMARY KEY,
     city_name VARCHAR(50) NOT NULL,
@@ -22,6 +24,7 @@ CREATE TABLE city_tags.city_tags (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE city_tags.cities;
-DROP TABLE city_tags.city_tags;
+DROP TABLE city_tags.city_tags CASCADE;
+DROP TABLE city_tags.cities CASCADE;
+DROP SCHEMA city_tags;
 -- +goose StatementEnd

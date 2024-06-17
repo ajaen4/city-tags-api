@@ -34,7 +34,7 @@ info:
   title: City Tags API
   version: 0.0.1
 paths:
-  /test:
+  /v0/cities/{cityId}:
     get:
       consumes:
       - application/json

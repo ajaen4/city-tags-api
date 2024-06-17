@@ -22,7 +22,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/test": {
+        "/v0/cities/{cityId}": {
             "get": {
                 "description": "Get city information by providing a specific city id",
                 "consumes": [

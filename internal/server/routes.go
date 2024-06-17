@@ -19,7 +19,9 @@ func (api *Api) RegisterRoutes() *chi.Mux {
 	r.Use(middleware.Logger)
 
 	r.Get("/v0/swagger/*", httpSwagger.WrapHandler)
+
 	r.Get("/v0/cities/{cityId}", NewHandler(api.getCity))
+	r.Get("/v0/cities", NewHandler(api.getCities))
 
 	return r
 }

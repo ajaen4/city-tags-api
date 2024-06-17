@@ -34,6 +34,32 @@ info:
   title: City Tags API
   version: 0.0.1
 paths:
+  /v0/cities/:
+    get:
+      consumes:
+      - application/json
+      description: Get cities with pagination
+      parameters:
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      - description: Limit for pagination
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.getCityResp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api_errors.ClientErr'
+      summary: Get cities
   /v0/cities/{cityId}:
     get:
       consumes:

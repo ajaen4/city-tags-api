@@ -1,2 +1,14 @@
 config:
   aws:region: eu-west-1
+  services:
+    city-tags-api:
+      build_version: 0.0.2 # city_tags_api version
+      cpu: 256
+      memory: 512
+      min_count: 3
+      max_count: 10
+      lb_port: 80
+      container_port: 8080
+      env_vars:
+        - name: ENV
+          value: dev

@@ -6,12 +6,28 @@ import (
 )
 
 type Config struct {
-	Region string
+	Ctx         *pulumi.Context
+	ServicesCfg map[string]*ServiceCfg
 }
 
-func Load(ctx *pulumi.Context) (*Config, error) {
+type ServiceCfg struct {
+	BuildVersion  string `json:"build_version"`
+	Cpu           int    `json:"cpu"`
+	Memory        int    `json:"memory"`
+	MinCount      int    `json:"min_count"`
+	MaxCount      int    `json:"max_count"`
+	LbPort        int    `json:"lb_port"`
+	ContainerPort int    `json:"container_port"`
+}
+
+func Load(ctx *pulumi.Context) *Config {
 	cfg := config.New(ctx, "")
+
+	servicesCfg := map[string]*ServiceCfg{}
+	cfg.RequireObject("services", &servicesCfg)
+
 	return &Config{
-		Region: cfg.Require("region"),
-	}, nil
+		Ctx:         ctx,
+		ServicesCfg: servicesCfg,
+	}
 }

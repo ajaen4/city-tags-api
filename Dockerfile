@@ -12,7 +12,6 @@ FROM alpine:latest
 WORKDIR /root/
 
 COPY --from=builder /app/bin/main .
+COPY .env .
 
 EXPOSE 8080
-
-ENTRYPOINT [ "./main" ]

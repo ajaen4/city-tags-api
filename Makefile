@@ -5,7 +5,8 @@ include .env
 setup:
 	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=require)
 
-all: build
+build-local:	
+	@go build -o ./bin/main cmd/api/main.go
 
 build:	
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main cmd/api/main.go
@@ -43,7 +44,7 @@ migrations-status: setup
 
 docker-run: setup
 	docker build -t city-tags-api .
-	docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) city-tags-api
+	docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) --entrypoint /bin/sh city-tags-api -c "./main"
 
 docker-down:
 	docker rm city-tags-api

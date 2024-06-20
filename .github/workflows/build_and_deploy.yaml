@@ -24,7 +24,7 @@ jobs:
         with:
           work-dir: ./iac/
           command: up
-          stack-name: ${{ github.base_ref }}
+          stack-name: ${{ github.ref_name }}
           comment-on-pr: true
           comment-on-summary: true
           color: always

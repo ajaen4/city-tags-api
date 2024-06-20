@@ -1,6 +1,6 @@
-.PHONY: all build run test clean docs migrations setup
+.PHONY: build run test clean docs migrations setup
 
-include .env
+-include .env
 
 setup:
 	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=require)
@@ -49,12 +49,14 @@ docker-run: setup
 docker-down:
 	docker rm city-tags-api
 
-# Test the application
-test:
+unit-tests:
 	@echo "Testing..."
-	@go test ./tests -v
+	@go test ./internal -v
 
-# Clean the binary
+integration-tests:
+	@echo "Testing..."
+	@go test ./integration_tests -v
+
 clean:
 	@echo "Cleaning..."
 	@rm -f bin/main

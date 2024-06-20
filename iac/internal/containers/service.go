@@ -1,7 +1,9 @@
 package containers
 
 import (
+	"city-tags-api-iac/internal/aws_lib"
 	"city-tags-api-iac/internal/config"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -246,6 +248,11 @@ func (service *service) createECSService() {
 		log.Fatal(err)
 	}
 
+	envVars, err := json.Marshal(service.getEnvVars())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	containerDef := pulumi.All(imageURI, logGroup.Name).ApplyT(
 		func(args []any) pulumi.StringOutput {
 			return pulumi.Sprintf(`[
@@ -269,7 +276,8 @@ func (service *service) createECSService() {
 							"awslogs-region": "eu-west-1",
 							"awslogs-stream-prefix": "%s-log-stream"
 						}
-					}
+					},
+					"environment": %s
 				}
 			]`,
 				service.name,
@@ -279,6 +287,7 @@ func (service *service) createECSService() {
 				service.servCfg.ContainerPort,
 				args[1],
 				service.name,
+				envVars,
 			)
 		},
 	).(pulumi.StringOutput)
@@ -367,4 +376,20 @@ func (service *service) createECSService() {
 		log.Fatal(err)
 	}
 
+}
+
+func (service *service) getEnvVars() []map[string]string {
+	envVars := []map[string]string{}
+	ssm := aws_lib.NewSSM()
+	for _, envVarCfg := range service.servCfg.EnvVars {
+		if envVarCfg.Type == "SSM" {
+			ssmEnvVars := ssm.GetParam(envVarCfg.Path, true)
+			for name, value := range ssmEnvVars {
+				envVars = append(envVars, map[string]string{"name": name, "value": value})
+			}
+		} else {
+			envVars = append(envVars, ssm.GetParam(envVarCfg.Path, true))
+		}
+	}
+	return envVars
 }

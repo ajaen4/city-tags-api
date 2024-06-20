@@ -3,20 +3,16 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"time"
 )
 
 func main() {
 	apiEndpoint := "http://city-tags-api-lb-1927280828.eu-west-1.elb.amazonaws.com/v0/cities?limit=10&offset=200"
-	interval := 5 * time.Second
 
 	for {
 		err := makeRequest(apiEndpoint)
 		if err != nil {
 			fmt.Printf("Error making request: %v\n", err)
 		}
-
-		time.Sleep(interval)
 	}
 }
 

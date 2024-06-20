@@ -22,6 +22,9 @@ tmp/
 .vscode
 .idea
 
+#Useful commands
+commands
+
 # .env file
 .env
 

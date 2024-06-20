@@ -1,4 +1,4 @@
-.PHONY: all build run test clean docs migrations setup
+.PHONY: build run test clean docs migrations setup
 
 include .env
 
@@ -49,12 +49,14 @@ docker-run: setup
 docker-down:
 	docker rm city-tags-api
 
-# Test the application
-test:
+unit-tests:
 	@echo "Testing..."
-	@go test ./tests -v
+	@go test ./internal -v
 
-# Clean the binary
+integration-tests:
+	@echo "Testing..."
+	@go test ./integration_tests -v
+
 clean:
 	@echo "Cleaning..."
 	@rm -f bin/main

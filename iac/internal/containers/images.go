@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"city-tags-api-iac/internal/aws_lib"
 	"fmt"
 	"log"
 
@@ -29,6 +30,14 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 		return fmt.Sprintf("%s:%s-%s", repositoryUrl, img.name, version)
 	}).(pulumi.StringInput)
 
+	push := pulumi.All(img.repository.RepositoryUrl, tag).ApplyT(
+		func(args []any) bool {
+			ecr := aws_lib.NewECR()
+			push := ecr.IsImageInECR(args[0].(string), args[1].(string))
+			return push
+		},
+	).(pulumi.BoolInput)
+
 	_, err := dockerbuild.NewImage(
 		img.ctx,
 		fmt.Sprintf("%s-image", img.name),
@@ -51,7 +60,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 				},
 			},
 			Tags: pulumi.StringArray{tag},
-			Push: pulumi.Bool(true),
+			Push: push,
 		},
 	)
 	if err != nil {

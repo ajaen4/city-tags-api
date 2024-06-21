@@ -1,9 +1,11 @@
 package containers
 
 import (
+	"fmt"
+	"log"
+
 	"city-tags-api-iac/internal/config"
 	"city-tags-api-iac/internal/types"
-	"log"
 
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/iam"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -88,11 +90,12 @@ func (servs *Services) createRoles() map[string]*iam.Role {
 		]
 	}`)
 
+	execRoleName := fmt.Sprintf("execution-role-%s", servs.cfg.Ctx.Stack())
 	execRole, err := iam.NewRole(
 		servs.cfg.Ctx,
-		"execution_role",
+		execRoleName,
 		&iam.RoleArgs{
-			Name:             pulumi.String("execution-role"),
+			Name:             pulumi.String(execRoleName),
 			AssumeRolePolicy: pulumi.String(assumeRPol),
 		},
 	)
@@ -100,11 +103,12 @@ func (servs *Services) createRoles() map[string]*iam.Role {
 		log.Fatal(err)
 	}
 
+	execPolName := fmt.Sprintf("execution-role-policy-%s", servs.cfg.Ctx.Stack())
 	_, err = iam.NewRolePolicy(
 		servs.cfg.Ctx,
-		"execution-role-policy",
+		execPolName,
 		&iam.RolePolicyArgs{
-			Name:   pulumi.String("execution-role-policy"),
+			Name:   pulumi.String(execPolName),
 			Role:   execRole.ID(),
 			Policy: pulumi.String(execPol),
 		},
@@ -113,11 +117,12 @@ func (servs *Services) createRoles() map[string]*iam.Role {
 		log.Fatal(err)
 	}
 
+	taskRoleName := fmt.Sprintf("task-role-%s", servs.cfg.Ctx.Stack())
 	taskRole, err := iam.NewRole(
 		servs.cfg.Ctx,
-		"task_role",
+		taskRoleName,
 		&iam.RoleArgs{
-			Name:             pulumi.String("task-role"),
+			Name:             pulumi.String(taskRoleName),
 			AssumeRolePolicy: pulumi.String(assumeRPol),
 		},
 	)
@@ -125,11 +130,12 @@ func (servs *Services) createRoles() map[string]*iam.Role {
 		log.Fatal(err)
 	}
 
+	taskPolicyName := fmt.Sprintf("task-role-policy-%s", servs.cfg.Ctx.Stack())
 	_, err = iam.NewRolePolicy(
 		servs.cfg.Ctx,
-		"task-role-policy",
+		taskPolicyName,
 		&iam.RolePolicyArgs{
-			Name:   pulumi.String("task-role-policy"),
+			Name:   pulumi.String(taskPolicyName),
 			Role:   taskRole.ID(),
 			Policy: pulumi.String(taskPolicy),
 		},

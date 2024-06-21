@@ -33,14 +33,14 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 	push := pulumi.All(img.repository.RepositoryUrl, tag).ApplyT(
 		func(args []any) bool {
 			ecr := aws_lib.NewECR()
-			push := ecr.IsImageInECR(args[0].(string), args[1].(string))
+			push := !ecr.IsImageInECR(args[0].(string), args[1].(string))
 			return push
 		},
 	).(pulumi.BoolInput)
 
 	_, err := dockerbuild.NewImage(
 		img.ctx,
-		fmt.Sprintf("%s-image", img.name),
+		img.name,
 		&dockerbuild.ImageArgs{
 			Dockerfile: &dockerbuild.DockerfileArgs{
 				Location: pulumi.String("../Dockerfile"),

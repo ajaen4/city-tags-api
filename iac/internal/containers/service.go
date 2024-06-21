@@ -20,7 +20,7 @@ import (
 type service struct {
 	ctx              *pulumi.Context
 	name             string
-	servCfg          *config.ServiceCfg
+	cfg              *config.ServiceCfg
 	publicSubnetsOut pulumi.AnyOutput
 	roles            map[string]*iam.Role
 	sg               *ec2.SecurityGroup
@@ -35,7 +35,7 @@ func NewService(ctx *pulumi.Context, name string, servCfg *config.ServiceCfg, ro
 	return &service{
 		ctx:              ctx,
 		name:             name,
-		servCfg:          servCfg,
+		cfg:              servCfg,
 		publicSubnetsOut: baselineNetRef.GetOutput(pulumi.String("public_subnet_ids")),
 		roles:            roles,
 	}
@@ -47,7 +47,7 @@ func (service *service) deploy() {
 }
 
 func (service *service) createNetworking() {
-	lbSGName := fmt.Sprintf("%s-lb-sg", service.name)
+	lbSGName := fmt.Sprintf("%s-lb-sg-%s", service.name, service.ctx.Stack())
 	lbSG, err := ec2.NewSecurityGroup(
 		service.ctx,
 		lbSGName,
@@ -66,12 +66,12 @@ func (service *service) createNetworking() {
 
 	_, err = vpc.NewSecurityGroupIngressRule(
 		service.ctx,
-		fmt.Sprintf("%s-lb-ingress", service.name),
+		fmt.Sprintf("%s-lb-ingress-%s", service.name, service.ctx.Stack()),
 		&vpc.SecurityGroupIngressRuleArgs{
 			SecurityGroupId: lbSG.ID(),
 			CidrIpv4:        pulumi.String("0.0.0.0/0"),
-			FromPort:        pulumi.Int(service.servCfg.LbPort),
-			ToPort:          pulumi.Int(service.servCfg.LbPort),
+			FromPort:        pulumi.Int(service.cfg.LbPort),
+			ToPort:          pulumi.Int(service.cfg.LbPort),
 			IpProtocol:      pulumi.String("tcp"),
 		},
 	)
@@ -81,7 +81,7 @@ func (service *service) createNetworking() {
 
 	_, err = vpc.NewSecurityGroupEgressRule(
 		service.ctx,
-		fmt.Sprintf("%s-lb-egress", service.name),
+		fmt.Sprintf("%s-lb-egress-%s", service.name, service.ctx.Stack()),
 		&vpc.SecurityGroupEgressRuleArgs{
 			SecurityGroupId: lbSG.ID(),
 			CidrIpv4:        pulumi.String("0.0.0.0/0"),
@@ -94,7 +94,7 @@ func (service *service) createNetworking() {
 		log.Fatal(err)
 	}
 
-	srvSGName := fmt.Sprintf("%s-service-sg", service.name)
+	srvSGName := fmt.Sprintf("%s-service-sg-%s", service.name, service.ctx.Stack())
 	service.sg, err = ec2.NewSecurityGroup(
 		service.ctx,
 		srvSGName,
@@ -113,7 +113,7 @@ func (service *service) createNetworking() {
 
 	_, err = vpc.NewSecurityGroupIngressRule(
 		service.ctx,
-		fmt.Sprintf("%s-service-ingress", service.name),
+		fmt.Sprintf("%s-service-ingress-%s", service.name, service.ctx.Stack()),
 		&vpc.SecurityGroupIngressRuleArgs{
 			SecurityGroupId:           service.sg.ID(),
 			FromPort:                  pulumi.Int(0),
@@ -128,7 +128,7 @@ func (service *service) createNetworking() {
 
 	_, err = vpc.NewSecurityGroupEgressRule(
 		service.ctx,
-		fmt.Sprintf("%s-service-egress", service.name),
+		fmt.Sprintf("%s-service-egress-%s", service.name, service.ctx.Stack()),
 		&vpc.SecurityGroupEgressRuleArgs{
 			SecurityGroupId: service.sg.ID(),
 			CidrIpv4:        pulumi.String("0.0.0.0/0"),
@@ -141,7 +141,7 @@ func (service *service) createNetworking() {
 		log.Fatal(err)
 	}
 
-	lbName := fmt.Sprintf("%s-lb", service.name)
+	lbName := fmt.Sprintf("%s-lb-%s", service.name, service.ctx.Stack())
 	serviceLB, err := lb.NewLoadBalancer(
 		service.ctx,
 		lbName,
@@ -167,13 +167,13 @@ func (service *service) createNetworking() {
 		log.Fatal(err)
 	}
 
-	TargGrName := fmt.Sprintf("%s-target-group", service.name)
+	TargGrName := fmt.Sprintf("%s-target-group-%s", service.name, service.ctx.Stack())
 	service.targetGroup, err = lb.NewTargetGroup(
 		service.ctx,
 		TargGrName,
 		&lb.TargetGroupArgs{
 			Name:       pulumi.String(TargGrName),
-			Port:       pulumi.Int(service.servCfg.LbPort),
+			Port:       pulumi.Int(service.cfg.LbPort),
 			Protocol:   pulumi.String("HTTP"),
 			VpcId:      pulumi.String("vpc-056a5820b4dc966b9"),
 			TargetType: pulumi.String("ip"),
@@ -194,10 +194,10 @@ func (service *service) createNetworking() {
 
 	_, err = lb.NewListener(
 		service.ctx,
-		fmt.Sprintf("%s-listener", service.name),
+		fmt.Sprintf("%s-listener-%s", service.name, service.ctx.Stack()),
 		&lb.ListenerArgs{
 			LoadBalancerArn: serviceLB.Arn,
-			Port:            pulumi.Int(service.servCfg.LbPort),
+			Port:            pulumi.Int(service.cfg.LbPort),
 			DefaultActions: lb.ListenerDefaultActionArray{
 				&lb.ListenerDefaultActionArgs{
 					Type:           pulumi.String("forward"),
@@ -215,18 +215,18 @@ func (service *service) createNetworking() {
 func (service *service) createECSService() {
 	ecrRepo := NewRepository(
 		service.ctx,
-		fmt.Sprintf("%s-repository", service.name),
+		fmt.Sprintf("%s-repository-%s", service.name, service.ctx.Stack()),
 	)
 	image := NewImage(
 		service.ctx,
-		fmt.Sprintf("%s-image", service.name),
+		fmt.Sprintf("%s-image-%s", service.name, service.ctx.Stack()),
 		ecrRepo.EcrRepository,
 	)
-	imageURI := image.PushImage(service.servCfg.BuildVersion)
+	imageURI := image.PushImage(service.cfg.BuildVersion)
 
 	logGroup, err := cloudwatch.NewLogGroup(
 		service.ctx,
-		fmt.Sprintf("%s-log-group", service.name),
+		fmt.Sprintf("%s-log-group-%s", service.name, service.ctx.Stack()),
 		&cloudwatch.LogGroupArgs{
 			Name:            pulumi.String(fmt.Sprintf("ecs/%s", service.name)),
 			RetentionInDays: pulumi.Int(30),
@@ -236,7 +236,7 @@ func (service *service) createECSService() {
 		log.Fatal(err)
 	}
 
-	clusterName := fmt.Sprintf("%s-cluster", service.name)
+	clusterName := fmt.Sprintf("%s-cluster-%s", service.name, service.ctx.Stack())
 	cluster, err := ecs.NewCluster(
 		service.ctx,
 		clusterName,
@@ -282,9 +282,9 @@ func (service *service) createECSService() {
 			]`,
 				service.name,
 				args[0],
-				service.servCfg.Cpu,
-				service.servCfg.Memory,
-				service.servCfg.ContainerPort,
+				service.cfg.Cpu,
+				service.cfg.Memory,
+				service.cfg.ContainerPort,
 				args[1],
 				service.name,
 				envVars,
@@ -292,7 +292,7 @@ func (service *service) createECSService() {
 		},
 	).(pulumi.StringOutput)
 
-	taskDefName := fmt.Sprintf("%s-task-def", service.name)
+	taskDefName := fmt.Sprintf("%s-task-def-%s", service.name, service.ctx.Stack())
 	taskDef, err := ecs.NewTaskDefinition(
 		service.ctx,
 		taskDefName,
@@ -301,8 +301,8 @@ func (service *service) createECSService() {
 			NetworkMode:             pulumi.String("awsvpc"),
 			ContainerDefinitions:    containerDef,
 			RequiresCompatibilities: pulumi.StringArray{pulumi.String("FARGATE")},
-			Cpu:                     pulumi.StringPtr(fmt.Sprint(service.servCfg.Cpu)),
-			Memory:                  pulumi.StringPtr(fmt.Sprint(service.servCfg.Memory)),
+			Cpu:                     pulumi.StringPtr(fmt.Sprint(service.cfg.Cpu)),
+			Memory:                  pulumi.StringPtr(fmt.Sprint(service.cfg.Memory)),
 			ExecutionRoleArn:        service.roles["exec_role"].Arn,
 			TaskRoleArn:             service.roles["task_role"].Arn,
 		})
@@ -310,7 +310,7 @@ func (service *service) createECSService() {
 		log.Fatal(taskDef)
 	}
 
-	serviceName := fmt.Sprintf("%s-service", service.name)
+	serviceName := fmt.Sprintf("%s-service-%s", service.name, service.ctx.Stack())
 	_, err = ecs.NewService(
 		service.ctx,
 		serviceName,
@@ -318,13 +318,13 @@ func (service *service) createECSService() {
 			Name:           pulumi.String(serviceName),
 			Cluster:        cluster.ID(),
 			TaskDefinition: taskDef.Arn,
-			DesiredCount:   pulumi.Int(service.servCfg.MinCount),
+			DesiredCount:   pulumi.Int(service.cfg.MinCount),
 			LaunchType:     pulumi.String("FARGATE"),
 			LoadBalancers: ecs.ServiceLoadBalancerArray{
 				&ecs.ServiceLoadBalancerArgs{
 					TargetGroupArn: service.targetGroup.Arn,
 					ContainerName:  pulumi.String(service.name),
-					ContainerPort:  pulumi.Int(service.servCfg.ContainerPort),
+					ContainerPort:  pulumi.Int(service.cfg.ContainerPort),
 				},
 			},
 			NetworkConfiguration: ecs.ServiceNetworkConfigurationArgs{
@@ -338,14 +338,16 @@ func (service *service) createECSService() {
 		log.Fatal(err)
 	}
 
-	serviceId := pulumi.Sprintf("service/%s/%s", clusterName, serviceName)
+	serviceId := pulumi.Sprintf(
+		"service/%s/%s", clusterName, serviceName,
+	)
 	scalingTarget, err := appautoscaling.NewTarget(
 		service.ctx,
-		fmt.Sprintf("%s-scaling-target", serviceName),
+		fmt.Sprintf("%s-scaling-target-%s", service.name, service.ctx.Stack()),
 		&appautoscaling.TargetArgs{
 			ResourceId:        serviceId,
-			MinCapacity:       pulumi.Int(service.servCfg.MinCount),
-			MaxCapacity:       pulumi.Int(service.servCfg.MaxCount),
+			MinCapacity:       pulumi.Int(service.cfg.MinCount),
+			MaxCapacity:       pulumi.Int(service.cfg.MaxCount),
 			ScalableDimension: pulumi.String("ecs:service:DesiredCount"),
 			ServiceNamespace:  pulumi.String("ecs"),
 		})
@@ -355,7 +357,7 @@ func (service *service) createECSService() {
 
 	_, err = appautoscaling.NewPolicy(
 		service.ctx,
-		fmt.Sprintf("%s-scaling-policy", serviceName),
+		fmt.Sprintf("%s-scaling-policy-%s", service.name, service.ctx.Stack()),
 		&appautoscaling.PolicyArgs{
 			PolicyType:        pulumi.String("TargetTrackingScaling"),
 			ResourceId:        serviceId,
@@ -381,7 +383,7 @@ func (service *service) createECSService() {
 func (service *service) getEnvVars() []map[string]string {
 	envVars := []map[string]string{}
 	ssm := aws_lib.NewSSM()
-	for _, envVarCfg := range service.servCfg.EnvVars {
+	for _, envVarCfg := range service.cfg.EnvVars {
 		if envVarCfg.Type == "SSM" {
 			ssmEnvVars := ssm.GetParam(envVarCfg.Path, true)
 			for name, value := range ssmEnvVars {

@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/acm"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/appautoscaling"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/cloudwatch"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ec2"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ecs"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/lb"
+	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/route53"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/vpc"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -167,6 +169,74 @@ func (service *service) createNetworking() {
 		log.Fatal(err)
 	}
 
+	hostedZoneID := "Z0759372AQTBEHRHRO9W"
+	subdomain, err := route53.NewRecord(
+		service.ctx,
+		fmt.Sprintf("%s-subdomain-%s", service.name, service.ctx.Stack()),
+		&route53.RecordArgs{
+			ZoneId: pulumi.String(hostedZoneID),
+			Name:   pulumi.Sprintf("%s.city-tags-api.sityex.com", service.ctx.Stack()),
+			Type:   pulumi.String("A"),
+			Aliases: route53.RecordAliasArray{
+				&route53.RecordAliasArgs{
+					Name:                 serviceLB.DnsName,
+					ZoneId:               serviceLB.ZoneId,
+					EvaluateTargetHealth: pulumi.Bool(true),
+				},
+			},
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cert, err := acm.NewCertificate(
+		service.ctx,
+		fmt.Sprintf("%s-certificate-%s", service.name, service.ctx.Stack()),
+		&acm.CertificateArgs{
+			DomainName:       subdomain.Fqdn,
+			ValidationMethod: pulumi.String("DNS"),
+			Tags: pulumi.StringMap{
+				"Environment": pulumi.String(service.ctx.Stack()),
+			},
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	validationRecord, err := route53.NewRecord(
+		service.ctx,
+		fmt.Sprintf("%s-certificate-record-%s", service.name, service.ctx.Stack()),
+		&route53.RecordArgs{
+			ZoneId: pulumi.String(hostedZoneID),
+			Name: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) string {
+				return *options[0].ResourceRecordName
+			}).(pulumi.StringOutput),
+			Type: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) string {
+				return *options[0].ResourceRecordType
+			}).(pulumi.StringOutput),
+			Records: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) []string {
+				return []string{*options[0].ResourceRecordValue}
+			}).(pulumi.StringArrayOutput),
+			Ttl: pulumi.Int(60),
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Wait for certificate validation
+	certValidation, err := acm.NewCertificateValidation(
+		service.ctx,
+		fmt.Sprintf("%s-certificate-validation-%s", service.name, service.ctx.Stack()),
+		&acm.CertificateValidationArgs{
+			CertificateArn: cert.Arn,
+			ValidationRecordFqdns: pulumi.StringArray{
+				validationRecord.Fqdn,
+			},
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	TargGrName := fmt.Sprintf("%s-target-group-%s", service.name, service.ctx.Stack())
 	service.targetGroup, err = lb.NewTargetGroup(
 		service.ctx,
@@ -187,6 +257,7 @@ func (service *service) createNetworking() {
 				Matcher:            pulumi.String("200"),
 			},
 		},
+		pulumi.DependsOn([]pulumi.Resource{serviceLB}),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -198,6 +269,9 @@ func (service *service) createNetworking() {
 		&lb.ListenerArgs{
 			LoadBalancerArn: serviceLB.Arn,
 			Port:            pulumi.Int(service.cfg.LbPort),
+			Protocol:        pulumi.String("HTTPS"),
+			SslPolicy:       pulumi.String("ELBSecurityPolicy-2016-08"),
+			CertificateArn:  cert.Arn,
 			DefaultActions: lb.ListenerDefaultActionArray{
 				&lb.ListenerDefaultActionArgs{
 					Type:           pulumi.String("forward"),
@@ -205,6 +279,7 @@ func (service *service) createNetworking() {
 				},
 			},
 		},
+		pulumi.DependsOn([]pulumi.Resource{certValidation}),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -311,7 +386,7 @@ func (service *service) createECSService() {
 	}
 
 	serviceName := fmt.Sprintf("%s-service-%s", service.name, service.ctx.Stack())
-	_, err = ecs.NewService(
+	ecsService, err := ecs.NewService(
 		service.ctx,
 		serviceName,
 		&ecs.ServiceArgs{
@@ -350,7 +425,9 @@ func (service *service) createECSService() {
 			MaxCapacity:       pulumi.Int(service.cfg.MaxCount),
 			ScalableDimension: pulumi.String("ecs:service:DesiredCount"),
 			ServiceNamespace:  pulumi.String("ecs"),
-		})
+		},
+		pulumi.DependsOn([]pulumi.Resource{ecsService}),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -372,7 +449,7 @@ func (service *service) createECSService() {
 				},
 			},
 		},
-		pulumi.DependsOn([]pulumi.Resource{scalingTarget}),
+		pulumi.DependsOn([]pulumi.Resource{scalingTarget, ecsService}),
 	)
 	if err != nil {
 		log.Fatal(err)

@@ -26,17 +26,17 @@ func NewImage(ctx *pulumi.Context, name string, repository *ecr.Repository) *Ima
 
 func (img *Image) PushImage(version string) pulumi.StringInput {
 	authToken := img.authenticate()
-	tag := img.repository.RepositoryUrl.ApplyT(func(repositoryUrl string) string {
-		return fmt.Sprintf("%s:%s-%s", repositoryUrl, img.name, version)
+	imageTag := fmt.Sprintf("%s-%s", img.name, version)
+
+	imageURI := img.repository.RepositoryUrl.ApplyT(func(repositoryUrl string) string {
+		return fmt.Sprintf("%s:%s", repositoryUrl, imageTag)
 	}).(pulumi.StringInput)
 
-	push := pulumi.All(img.repository.RepositoryUrl, tag).ApplyT(
-		func(args []any) bool {
-			ecr := aws_lib.NewECR()
-			push := !ecr.IsImageInECR(args[0].(string), args[1].(string))
-			return push
-		},
-	).(pulumi.BoolInput)
+	push := img.repository.RepositoryUrl.ApplyT(func(repositoryUrl string) bool {
+		ecr := aws_lib.NewECR()
+		push := !ecr.IsImageInECR(repositoryUrl, imageTag)
+		return push
+	}).(pulumi.BoolInput)
 
 	_, err := dockerbuild.NewImage(
 		img.ctx,
@@ -59,7 +59,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 					Username: authToken.UserName(),
 				},
 			},
-			Tags: pulumi.StringArray{tag},
+			Tags: pulumi.StringArray{imageURI},
 			Push: push,
 		},
 	)
@@ -67,7 +67,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 		log.Fatal(err)
 	}
 
-	return tag
+	return imageURI
 }
 
 func (img *Image) authenticate() ecr.GetAuthorizationTokenResultOutput {

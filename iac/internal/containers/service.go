@@ -24,6 +24,7 @@ type service struct {
 	name             string
 	cfg              *config.ServiceCfg
 	publicSubnetsOut pulumi.AnyOutput
+	vpcIdOut         pulumi.StringOutput
 	roles            map[string]*iam.Role
 	sg               *ec2.SecurityGroup
 	targetGroup      *lb.TargetGroup
@@ -39,6 +40,7 @@ func NewService(ctx *pulumi.Context, name string, servCfg *config.ServiceCfg, ro
 		name:             name,
 		cfg:              servCfg,
 		publicSubnetsOut: baselineNetRef.GetOutput(pulumi.String("public_subnet_ids")),
+		vpcIdOut:         baselineNetRef.GetOutput(pulumi.String("vpc_id")).AsStringOutput(),
 		roles:            roles,
 	}
 }
@@ -56,7 +58,7 @@ func (service *service) createNetworking() {
 		&ec2.SecurityGroupArgs{
 			Name:        pulumi.String(lbSGName),
 			Description: pulumi.String("Controls access to the ALB"),
-			VpcId:       pulumi.String("vpc-056a5820b4dc966b9"),
+			VpcId:       service.vpcIdOut,
 			Tags: pulumi.StringMap{
 				"Name": pulumi.String(lbSGName),
 			},
@@ -103,7 +105,7 @@ func (service *service) createNetworking() {
 		&ec2.SecurityGroupArgs{
 			Name:        pulumi.String(srvSGName),
 			Description: pulumi.String("Controls access to the ECS Service"),
-			VpcId:       pulumi.String("vpc-056a5820b4dc966b9"),
+			VpcId:       service.vpcIdOut,
 			Tags: pulumi.StringMap{
 				"Name": pulumi.String(srvSGName),
 			},
@@ -169,12 +171,11 @@ func (service *service) createNetworking() {
 		log.Fatal(err)
 	}
 
-	hostedZoneID := "Z0759372AQTBEHRHRO9W"
 	subdomain, err := route53.NewRecord(
 		service.ctx,
 		fmt.Sprintf("%s-subdomain-%s", service.name, service.ctx.Stack()),
 		&route53.RecordArgs{
-			ZoneId: pulumi.String(hostedZoneID),
+			ZoneId: pulumi.String(service.cfg.HostedZoneID),
 			Name:   pulumi.Sprintf("%s.city-tags-api.sityex.com", service.ctx.Stack()),
 			Type:   pulumi.String("A"),
 			Aliases: route53.RecordAliasArray{
@@ -207,7 +208,7 @@ func (service *service) createNetworking() {
 		service.ctx,
 		fmt.Sprintf("%s-certificate-record-%s", service.name, service.ctx.Stack()),
 		&route53.RecordArgs{
-			ZoneId: pulumi.String(hostedZoneID),
+			ZoneId: pulumi.String(service.cfg.HostedZoneID),
 			Name: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) string {
 				return *options[0].ResourceRecordName
 			}).(pulumi.StringOutput),
@@ -245,7 +246,7 @@ func (service *service) createNetworking() {
 			Name:       pulumi.String(TargGrName),
 			Port:       pulumi.Int(service.cfg.LbPort),
 			Protocol:   pulumi.String("HTTP"),
-			VpcId:      pulumi.String("vpc-056a5820b4dc966b9"),
+			VpcId:      service.vpcIdOut,
 			TargetType: pulumi.String("ip"),
 			HealthCheck: lb.TargetGroupHealthCheckArgs{
 				Path:               pulumi.String("/ping"),

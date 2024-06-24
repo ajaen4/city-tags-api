@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   psql:
-    image: postgres:latest
+    image: postgres:15.1
     environment:
-      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:

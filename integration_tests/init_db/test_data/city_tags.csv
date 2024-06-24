@@ -1,0 +1,4 @@
+city_id,cloud_coverage_tag,humidity_tag,temp_tag,precipitation_tag,air_quality_tag,daylight_hours_tag,city_size_tag
+3838859,partly cloudy,moderate,cold,moderate,good,high,small
+3430443,partly cloudy,moderate,mild,moderately wet,good,high,small
+3430988,partly cloudy,moderate,mild,moderate,good,high,small

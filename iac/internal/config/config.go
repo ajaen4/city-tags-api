@@ -27,6 +27,7 @@ type ServiceCfg struct {
 	MaxCount      int      `json:"max_count"`
 	LbPort        int      `json:"lb_port"`
 	ContainerPort int      `json:"container_port"`
+	HostedZoneID  string   `json:"hosted_zone_id"`
 	EnvVars       []EnvVar `json:"env_vars"`
 }
 

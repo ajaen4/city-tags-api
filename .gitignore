@@ -30,6 +30,3 @@ commands
 
 # Project build
 bin
-
-# Init db data
-init_db/data/

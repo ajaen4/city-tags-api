@@ -3,7 +3,7 @@
 -include .env
 
 setup:
-	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=require)
+	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable)
 
 build-local:	
 	@go build -o ./bin/main cmd/api/main.go
@@ -12,17 +12,17 @@ build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main cmd/api/main.go
 
 run:
-	make docs
-	air
+	@make docs
+	@air
 
 docs:
 	if [ -d docs/ ]; then rm -r docs/; fi && swag init --dir ./cmd/api,./internal/server,./internal/api_errors
 
 open-db-conn: setup
-	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)
+	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)
 
 init-db: setup
-	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME) -f ./init_db/init_queries.sql
+	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME) -f ./integration_tests/init_db/init_queries.sql
 
 create-migration: setup
 	@if [ -z "$(MIGRATION_NAME)" ]; then \
@@ -42,20 +42,34 @@ reset-migrations: setup
 migrations-status: setup
 	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
 
-docker-run: setup
+single-image-run: setup
 	docker build -t city-tags-api .
 	docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) --entrypoint /bin/sh city-tags-api -c "./main"
 
-docker-down:
+single-image-down:
 	docker rm city-tags-api
 
+test-env-up:
+	@echo "Running test env..."
+	@docker-compose up -d
+	@echo "Waiting for test env to be ready..."
+	@sleep 5
+	@echo "Running migrations..."
+	@make run-migrations
+	@echo "Initializing db..."
+	@make init-db DATA_PATH=./init_db/data
+
+test-env-down:
+	@docker-compose down --volumes
+
 unit-tests:
-	@echo "Testing..."
-	@go test ./internal -v
+	@echo "Running unit tests..."
+	@go test ./internal/... -v
 
 integration-tests:
-	@echo "Testing..."
-	@go test ./integration_tests -v
+	@make test-env-up
+	@echo "Running integration tests..."
+	@go test ./integration_tests/... -v; result=$(?); make test-env-down; exit $(result)
 
 clean:
 	@echo "Cleaning..."

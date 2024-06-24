@@ -9,6 +9,7 @@ config:
       max_count: 10
       lb_port: 443
       container_port: 8080
+      hosted_zone_id: Z0759372AQTBEHRHRO9W
       env_vars:
         - type: SSM
           path: /city-tags-api/dev/db

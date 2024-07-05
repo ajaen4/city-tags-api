@@ -22,7 +22,11 @@ open-db-conn: setup
 	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)
 
 init-db: setup
-	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME) -f ./integration_tests/init_db/init_queries.sql
+	@if [ -z "$(DATA_FILE)" ]; then \
+		echo "Error: DATA_FILE is not set"; \
+		exit 1; \
+	fi
+	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME) -f $(DATA_FILE)
 
 create-migration: setup
 	@if [ -z "$(MIGRATION_NAME)" ]; then \
@@ -57,7 +61,7 @@ test-env-up:
 	@echo "Running migrations..."
 	@make run-migrations
 	@echo "Initializing db..."
-	@make init-db DATA_PATH=./init_db/data
+	@make init-db DATA_FILE=$(DATA_FILE)
 
 test-env-down:
 	@docker-compose down --volumes
@@ -67,7 +71,7 @@ unit-tests:
 	@go test ./internal/... -v
 
 integration-tests:
-	@make test-env-up
+	@make test-env-up DATA_FILE=./integration_tests/init_db/init_queries.sql
 	@echo "Running integration tests..."
 	@go test ./integration_tests/... -v; result=$(?); make test-env-down; exit $(result)
 

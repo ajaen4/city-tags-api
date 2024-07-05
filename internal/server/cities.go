@@ -7,15 +7,15 @@ import (
 	"strconv"
 )
 
-type getCityResp struct {
+type GetCityResp struct {
 	CityId       int    `json:"city_id"`
 	CityName     string `json:"city_name"`
 	Continent    string `json:"continent"`
 	Country3Code string `json:"country_3_code"`
 }
 
-type getCitiesResp struct {
-	Cities []getCityResp `json:"cities"`
+type GetCitiesResp struct {
+	Cities []GetCityResp `json:"cities"`
 	Offset int           `json:"offset"`
 }
 
@@ -93,12 +93,12 @@ func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var citiesData = getCitiesResp{
-		Cities: []getCityResp{},
+	var citiesData = GetCitiesResp{
+		Cities: []GetCityResp{},
 		Offset: citiesReq.offset + citiesReq.limit,
 	}
 	for rows.Next() {
-		cityData := getCityResp{}
+		cityData := GetCityResp{}
 		err = rows.Scan(&cityData.CityId, &cityData.CityName, &cityData.Continent, &cityData.Country3Code)
 		if err != nil {
 			return err
@@ -149,7 +149,7 @@ func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var cityData getCityResp
+	var cityData GetCityResp
 	if rows.Next() {
 		err = rows.Scan(&cityData.CityId, &cityData.CityName, &cityData.Continent, &cityData.Country3Code)
 		if err != nil {

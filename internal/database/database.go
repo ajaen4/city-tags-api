@@ -23,6 +23,7 @@ type database struct {
 }
 
 var (
+	env        = os.Getenv("ENV")
 	db_name    = os.Getenv("DB_NAME")
 	password   = os.Getenv("DB_PASSWORD")
 	username   = os.Getenv("DB_USERNAME")
@@ -35,7 +36,22 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", username, password, host, port, db_name)
+
+	var sslmode string
+	if env == "LOCAL" {
+		sslmode = "disable"
+	} else {
+		sslmode = "require"
+	}
+	connStr := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		username,
+		password,
+		host,
+		port,
+		db_name,
+		sslmode,
+	)
 
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {

@@ -55,16 +55,16 @@ single-image-down:
 
 test-env-up:
 	@echo "Running test env..."
-	@docker-compose up -d
+	@docker compose up -d
 	@echo "Waiting for test env to be ready..."
-	@sleep 5
 	@echo "Running migrations..."
 	@make run-migrations
 	@echo "Initializing db..."
 	@make init-db DATA_FILE=$(DATA_FILE)
 
 test-env-down:
-	@docker-compose down --volumes
+	@docker compose down --volumes
+	@docker images | grep 'city-tags-api-test' | awk '{print $$3}' | xargs -r docker rmi || true
 
 unit-tests:
 	@echo "Running unit tests..."

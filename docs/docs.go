@@ -22,7 +22,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/v0/cities/": {
+        "/v0/cities": {
             "get": {
                 "description": "Get cities with pagination",
                 "consumes": [
@@ -50,7 +50,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.getCityResp"
+                            "$ref": "#/definitions/server.GetCityResp"
                         }
                     },
                     "500": {
@@ -76,7 +76,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.getCityResp"
+                            "$ref": "#/definitions/server.GetCityResp"
                         }
                     },
                     "500": {
@@ -107,7 +107,7 @@ const docTemplate = `{
                 }
             }
         },
-        "server.getCityResp": {
+        "server.GetCityResp": {
             "type": "object",
             "properties": {
                 "city_id": {

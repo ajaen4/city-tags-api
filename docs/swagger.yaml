@@ -11,7 +11,7 @@ definitions:
       message:
         type: string
     type: object
-  server.getCityResp:
+  server.GetCityResp:
     properties:
       city_id:
         type: integer
@@ -34,7 +34,7 @@ info:
   title: City Tags API
   version: 0.0.3
 paths:
-  /v0/cities/:
+  /v0/cities:
     get:
       consumes:
       - application/json
@@ -54,7 +54,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.getCityResp'
+            $ref: '#/definitions/server.GetCityResp'
         "500":
           description: Internal Server Error
           schema:
@@ -71,7 +71,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.getCityResp'
+            $ref: '#/definitions/server.GetCityResp'
         "500":
           description: Internal Server Error
           schema:

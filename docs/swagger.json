@@ -16,7 +16,7 @@
     "host": "city-tags-api.com",
     "basePath": "/api/v0",
     "paths": {
-        "/v0/cities/": {
+        "/v0/cities": {
             "get": {
                 "description": "Get cities with pagination",
                 "consumes": [
@@ -44,7 +44,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.getCityResp"
+                            "$ref": "#/definitions/server.GetCityResp"
                         }
                     },
                     "500": {
@@ -70,7 +70,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.getCityResp"
+                            "$ref": "#/definitions/server.GetCityResp"
                         }
                     },
                     "500": {
@@ -101,7 +101,7 @@
                 }
             }
         },
-        "server.getCityResp": {
+        "server.GetCityResp": {
             "type": "object",
             "properties": {
                 "city_id": {

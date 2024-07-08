@@ -78,7 +78,7 @@ func (getCitR *getCitiesReq) validate(r *http.Request) error {
 // @Produce		json
 // @Param       offset  query int	false	"Offset for pagination"
 // @Param       limit   query int	false	"Limit for pagination"
-// @Success		200 	{object} 	getCityResp
+// @Success		200 	{object} 	GetCityResp
 // @Failure     500 	{object} 	api_errors.ClientErr
 // @Router		/v0/cities [get]
 func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
@@ -95,8 +95,8 @@ func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
 
 	var citiesData = GetCitiesResp{
 		Cities: []GetCityResp{},
-		Offset: citiesReq.offset + citiesReq.limit,
 	}
+	count := 0
 	for rows.Next() {
 		cityData := GetCityResp{}
 		err = rows.Scan(&cityData.CityId, &cityData.CityName, &cityData.Continent, &cityData.Country3Code)
@@ -104,7 +104,9 @@ func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		citiesData.Cities = append(citiesData.Cities, cityData)
+		count++
 	}
+	citiesData.Offset = citiesReq.offset + count
 
 	respondWithJSON(w, http.StatusOK, citiesData)
 	return nil
@@ -134,7 +136,7 @@ func (getCitR *getCityReq) validate(r *http.Request) error {
 // @Description	Get city information by providing a specific city id
 // @Accept			json
 // @Produce		json
-// @Success		200 {object} getCityResp
+// @Success		200 {object} GetCityResp
 // @Failure      500  {object} api_errors.ClientErr
 // @Router			/v0/cities/{cityId} [get]
 func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {

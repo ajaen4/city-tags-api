@@ -1,5 +1,6 @@
 services:
   psql:
+    container_name: database
     image: postgres:15.1
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -15,6 +16,7 @@ services:
     volumes:
       - psql_volume:/var/lib/postgresql/data
   city-tags-api:
+    container_name: api
     image: city-tags-api-test:latest
     build: .
     entrypoint: ./main

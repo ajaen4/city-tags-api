@@ -19,12 +19,12 @@ type GetCitiesResp struct {
 	Offset int           `json:"offset"`
 }
 
-type getCitiesReq struct {
+type GetCitiesReq struct {
 	offset int
 	limit  int
 }
 
-func (getCitR *getCitiesReq) validate(r *http.Request) error {
+func (getCitR *GetCitiesReq) validate(r *http.Request) error {
 	var err error
 	var offset int
 	clientErr := &api_errors.ClientErr{
@@ -82,7 +82,7 @@ func (getCitR *getCitiesReq) validate(r *http.Request) error {
 // @Failure     500 	{object} 	api_errors.ClientErr
 // @Router		/v0/cities [get]
 func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
-	citiesReq := &getCitiesReq{}
+	citiesReq := &GetCitiesReq{}
 	err := citiesReq.validate(r)
 	if err != nil {
 		return err
@@ -112,11 +112,11 @@ func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-type getCityReq struct {
+type GetCityReq struct {
 	cityId int
 }
 
-func (getCitR *getCityReq) validate(r *http.Request) error {
+func (getCitR *GetCityReq) validate(r *http.Request) error {
 	cityIdParam := r.PathValue("cityId")
 	cityId, err := strconv.Atoi(cityIdParam)
 	if cityIdParam == "" || err != nil {
@@ -140,13 +140,13 @@ func (getCitR *getCityReq) validate(r *http.Request) error {
 // @Failure      500  {object} api_errors.ClientErr
 // @Router			/v0/cities/{cityId} [get]
 func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
-	getCityReq := getCityReq{}
-	err := getCityReq.validate(r)
+	GetCityReq := GetCityReq{}
+	err := GetCityReq.validate(r)
 	if err != nil {
 		return err
 	}
 
-	rows, err := api.db.Query("select * from city_tags.cities where city_id = $1", getCityReq.cityId)
+	rows, err := api.db.Query("select * from city_tags.cities where city_id = $1", GetCityReq.cityId)
 	if err != nil {
 		return err
 	}

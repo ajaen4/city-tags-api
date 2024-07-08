@@ -1,13 +1,11 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-
   - repo: local
     hooks:
+      - id: create-api-docs
+        name: create-api-docs
+        entry: bash -c 'make docs && git add docs/*'
+        language: system
+        always_run: true
       - id: go-unit-tests
         name: go-unit-tests
         entry: make unit-tests
@@ -19,3 +17,11 @@ repos:
         language: system
         require_serial: true
         always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: docs/.*
+      - id: check-yaml

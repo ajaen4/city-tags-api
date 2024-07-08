@@ -18,10 +18,12 @@ func (api *Api) RegisterRoutes() *chi.Mux {
 	r.Use(middleware.Heartbeat("/ping"))
 	r.Use(middleware.Logger)
 
-	r.Get("/v0/swagger/*", httpSwagger.WrapHandler)
+	r.Route("/v0", func(r chi.Router) {
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
 
-	r.Get("/v0/cities/{cityId}", NewHandler(api.getCity))
-	r.Get("/v0/cities", NewHandler(api.getCities))
+		r.Get("/cities/{cityId}", NewHandler(api.getCity))
+		r.Get("/cities", NewHandler(api.getCities))
+	})
 
 	return r
 }

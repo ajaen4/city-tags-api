@@ -16,7 +16,7 @@ run:
 	@air
 
 docs:
-	if [ -d docs/ ]; then rm -r docs/; fi && swag init --dir ./cmd/api,./internal/server,./internal/api_errors,./internal/database
+	@if [ -d docs/ ]; then rm -r docs/; fi && swag init --dir ./cmd/api,./internal/server,./internal/api_errors,./internal/database
 
 open-db-conn: setup
 	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)

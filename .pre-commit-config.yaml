@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: go-unit-tests
+        name: go-unit-tests
+        entry: make unit-tests
+        language: system
+        always_run: true
+      - id: go-integration-tests
+        name: go-integration-tests
+        entry: make integration-tests
+        language: system
+        require_serial: true
+        always_run: true

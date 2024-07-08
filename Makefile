@@ -5,10 +5,10 @@
 setup:
 	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable)
 
-build-local:	
+build-local:
 	@go build -o ./bin/main cmd/api/main.go
 
-build:	
+build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/main cmd/api/main.go
 
 run:
@@ -73,7 +73,7 @@ unit-tests:
 integration-tests:
 	@make test-env-up DATA_FILE=./integration_tests/init_db/init_queries.sql
 	@echo "Running integration tests..."
-	@go test ./integration_tests/... -v; result=$(?); make test-env-down; exit $(result)
+	@go test ./integration_tests/... -v; result=$$?; make test-env-down; exit $$result
 
 clean:
 	@echo "Cleaning..."

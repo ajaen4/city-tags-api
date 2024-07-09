@@ -26,7 +26,7 @@ tmp/
 commands
 
 # .env file
-.env
+.github/.env
 
 # Project build
 bin

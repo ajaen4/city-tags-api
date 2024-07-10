@@ -43,7 +43,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 		img.name,
 		&dockerbuild.ImageArgs{
 			Dockerfile: &dockerbuild.DockerfileArgs{
-				Location: pulumi.String("../Dockerfile"),
+				Location: pulumi.String("../Dockerfile.api"),
 			},
 			Context: &dockerbuild.BuildContextArgs{
 				Location: pulumi.String("../"),

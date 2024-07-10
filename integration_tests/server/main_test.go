@@ -7,11 +7,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
+
+var endpoint string
+
+func TestMain(m *testing.M) {
+	if err := godotenv.Load("../../.env"); err != nil {
+		fmt.Printf("Error loading .env file: %v\n", err)
+		os.Exit(1)
+	}
+
+	serverHost := os.Getenv("SERVER_HOST")
+	serverPort := os.Getenv("SERVER_PORT")
+	endpoint = fmt.Sprintf("http://%s:%s", serverHost, serverPort)
+
+	// Run tests
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestGetCity(t *testing.T) {
 	tests := []struct {
@@ -41,7 +59,7 @@ func TestGetCity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpoint := fmt.Sprintf("http://localhost:8080/v0/cities/%s", tt.cityId)
+			endpoint := fmt.Sprintf("%s/v0/cities/%s", endpoint, tt.cityId)
 			resp, err := http.Get(endpoint)
 			if err != nil {
 				t.Fatal(err)
@@ -87,7 +105,7 @@ func TestGetCities(t *testing.T) {
 	}{
 		{
 			"Get all cities",
-			"http://localhost:8080/v0/cities?offset=0",
+			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=0"),
 			server.GetCitiesResp{
 				Cities: []server.GetCityResp{
 					{
@@ -114,7 +132,7 @@ func TestGetCities(t *testing.T) {
 		},
 		{
 			"Test offset",
-			"http://localhost:8080/v0/cities?offset=1",
+			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=1"),
 			server.GetCitiesResp{
 				Cities: []server.GetCityResp{
 					{
@@ -135,7 +153,7 @@ func TestGetCities(t *testing.T) {
 		},
 		{
 			"Test limit",
-			"http://localhost:8080/v0/cities?limit=1",
+			fmt.Sprintf("%s/v0/cities%s", endpoint, "?limit=1"),
 			server.GetCitiesResp{
 				Cities: []server.GetCityResp{
 					{
@@ -150,7 +168,7 @@ func TestGetCities(t *testing.T) {
 		},
 		{
 			"Test limit and offset",
-			"http://localhost:8080/v0/cities?offset=1&limit=1",
+			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=1&limit=1"),
 			server.GetCitiesResp{
 				Cities: []server.GetCityResp{
 					{
@@ -186,7 +204,7 @@ func TestGetCities(t *testing.T) {
 
 			for index, city := range fmtResp.Cities {
 				if tt.expected.Cities[index] != city {
-					t.Errorf("%s returned city %v want %v", tt.URL, tt.expected.Cities[index], tt.expected)
+					t.Errorf("%s returned city %v want %v", tt.URL, city, tt.expected.Cities[index])
 				}
 			}
 

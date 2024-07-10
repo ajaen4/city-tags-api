@@ -11,7 +11,7 @@ import (
 )
 
 //	@title			City Tags API
-//	@version		0.0.3
+//	@version		0.0.4
 //	@description	This is an API that makes available different tags for worlwide cities
 
 //	@contact.name	City Tags API Support

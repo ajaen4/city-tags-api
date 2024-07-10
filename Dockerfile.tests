@@ -1,0 +1,12 @@
+FROM golang:1.22
+
+RUN apt-get update
+RUN apt-get install -y postgresql-client
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN CGO_ENABLED=0 GO111MODULE=on go install github.com/pressly/goose/v3/cmd/goose@v3.20.0
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .

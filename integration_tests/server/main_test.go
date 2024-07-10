@@ -10,18 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 var endpoint string
 
 func TestMain(m *testing.M) {
-	if err := godotenv.Load("../../.env"); err != nil {
-		fmt.Printf("Error loading .env file: %v\n", err)
-		os.Exit(1)
-	}
-
 	serverHost := os.Getenv("SERVER_HOST")
 	serverPort := os.Getenv("SERVER_PORT")
 	endpoint = fmt.Sprintf("http://%s:%s", serverHost, serverPort)

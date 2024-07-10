@@ -3,7 +3,7 @@
 -include .env
 
 setup:
-	@$(eval GOOSE_DBSTRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable)
+	@$(eval DB_STRING=postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable)
 
 build-local:
 	@go build -o ./bin/main cmd/api/main.go
@@ -38,20 +38,20 @@ create-migration: setup
 
 # GOOSE_DBSTRING must have "" around it so the make file interprets correctly certain special characters
 run-migrations: setup
-	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" up
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DB_STRING)" up
 
 reset-migrations: setup
-	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" reset
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DB_STRING)" reset
 
 migrations-status: setup
-	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
+	@goose -dir $(MIGRATION_DIR) $(DB_DRIVER) "$(DB_STRING)" status
 
 single-image-run: setup
 	@docker build -t city-tags-api .
 	@docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) --entrypoint /bin/sh city-tags-api -c "./main"
 
 single-image-down:
-	@docker rm city-tags-api
+	@docker container rm city-tags-api
 
 integration-tests:
 	make test-env-up

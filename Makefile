@@ -16,7 +16,7 @@ run:
 	@air
 
 docs:
-	@if [ -d docs/ ]; then rm -r docs/; fi && swag init --dir ./cmd/api,./internal/server,./internal/api_errors,./internal/database
+	@swag init --dir ./cmd/api,./internal/server,./internal/api_errors,./internal/database
 
 open-db-conn: setup
 	@PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -U $(DB_USERNAME) -d $(DB_NAME)
@@ -47,34 +47,41 @@ migrations-status: setup
 	@goose -dir $(GOOSE_MIGRATION_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
 
 single-image-run: setup
-	docker build -t city-tags-api .
-	docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) --entrypoint /bin/sh city-tags-api -c "./main"
+	@docker build -t city-tags-api .
+	@docker run --name city-tags-api --env-file .env -p $(SERVER_PORT):$(SERVER_PORT) --entrypoint /bin/sh city-tags-api -c "./main"
 
 single-image-down:
-	docker rm city-tags-api
+	@docker rm city-tags-api
+
+integration-tests:
+	make test-env-up
+	@docker compose exec -T integration-tests make run-int-tests-in-container;result=$$?; make test-env-down; exit $$result
 
 test-env-up:
 	@echo "Running test env..."
-	@docker compose up -d
-	@echo "Waiting for test env to be ready..."
-	@echo "Running migrations..."
-	@make run-migrations
-	@echo "Initializing db..."
-	@make init-db DATA_FILE=$(DATA_FILE)
+	@docker compose up --build -d
+	@echo "Test env deployed"
 
 test-env-down:
+	@echo "Destroying test env..."
 	@docker compose down --volumes
-	@docker images | grep 'city-tags-api-test' | awk '{print $$3}' | xargs -r docker rmi || true
+	@echo "Test env destroyed"
 
 unit-tests:
 	@echo "Running unit tests..."
 	@go test ./internal/... -v
 
-integration-tests:
-	@make test-env-up DATA_FILE=./integration_tests/init_db/init_queries.sql
+run-int-tests-in-container:
+	@echo "Running migrations..."
+	@make run-migrations
+	@echo "Initializing db..."
+	@make init-db DATA_FILE=./integration_tests/init_db/init_queries.sql
 	@echo "Running integration tests..."
-	@go test ./integration_tests/... -v; result=$$?; make test-env-down; exit $$result
+	@go test ./integration_tests/... -v; result=$$?; exit $$result
 
 clean:
 	@echo "Cleaning..."
 	@rm -f bin/main
+
+test-cicd:
+	@act -P ubuntu-latest=catthehacker/ubuntu:act-22.04 -e .github/created_pr.json --job tests --secret-file .github/.env --container-architecture linux/amd64

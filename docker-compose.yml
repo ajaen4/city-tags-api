@@ -17,8 +17,10 @@ services:
       - psql_volume:/var/lib/postgresql/data
   city-tags-api:
     container_name: api
-    image: city-tags-api-test:latest
-    build: .
+    image: city-tags-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     entrypoint: ./main
     depends_on:
       psql:
@@ -31,8 +33,25 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/ping || exit 1"]
+      interval: 1s
+      timeout: 10s
+      retries: 10
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
+  integration-tests:
+    container_name: integration-tests
+    image: integration-tests:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    depends_on:
+      psql:
+        condition: service_healthy
+      city-tags-api:
+        condition: service_healthy
+    entrypoint: tail -f /dev/null
 
 volumes:
   psql_volume:

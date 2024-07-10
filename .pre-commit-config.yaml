@@ -3,14 +3,23 @@ repos:
     hooks:
       - id: create-api-docs
         name: create-api-docs
-        entry: bash -c 'make docs && git add docs/*'
+        entry: make docs
         language: system
         always_run: true
+
+      - id: add-api-docs
+        name: add-api-docs
+        entry: bash -c 'git add docs/*'
+        language: system
+        always_run: true
+        require_serial: true
+
       - id: go-unit-tests
         name: go-unit-tests
         entry: make unit-tests
         language: system
         always_run: true
+
       - id: go-integration-tests
         name: go-integration-tests
         entry: make integration-tests

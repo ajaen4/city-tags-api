@@ -6,15 +6,20 @@ import (
 	"time"
 
 	"city-tags-api/internal/database"
+
+	"github.com/go-chi/jwtauth/v5"
 )
 
 type Api struct {
-	db database.Service
+	db        database.Service
+	tokenAuth *jwtauth.JWTAuth
 }
 
 func NewServer(port int) *http.Server {
+
 	api := &Api{
-		db: database.New(),
+		db:        database.New(),
+		tokenAuth: getTokenAuth(),
 	}
 
 	server := &http.Server{

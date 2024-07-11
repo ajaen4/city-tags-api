@@ -53,10 +53,6 @@ single-image-run: setup
 single-image-down:
 	@docker container rm city-tags-api
 
-integration-tests:
-	make test-env-up
-	@docker compose exec -T integration-tests make run-int-tests-in-container;result=$$?; make test-env-down; exit $$result
-
 test-env-up:
 	@echo "Running test env..."
 	@docker compose up --build -d
@@ -70,6 +66,10 @@ test-env-down:
 unit-tests:
 	@echo "Running unit tests..."
 	@go test ./internal/... -v
+
+integration-tests:
+	make test-env-up
+	@docker compose exec -T integration-tests make run-int-tests-in-container;result=$$?; make test-env-down; exit $$result
 
 run-int-tests-in-container:
 	@echo "Running migrations..."

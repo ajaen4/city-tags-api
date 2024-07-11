@@ -7,7 +7,9 @@ API to be able to consume tags on cities, for example if the humidity is "modera
 
 ## Architecture
 
-![Architecture diagram](imgs/city-tags-api.png)
+<div style="text-align: center;">
+  <img src="imgs/city-tags-api.png" alt="Architecture diagram">
+</div>
 
 A DNS record with an SSL certificate is used to be able to set up a connection through HTTPS. An Application Load Balancer (ALB) is registered as a target of this registry. The ALB redirects traffic to the ECS Service where the Go API is deployed. The ECS Service makes use of SSM Parameter Store for environment variables and of ECR to store the different container images of the API. Finally, the API queries the database, in this case Supabase, where the serverless Postgres database is.
 
@@ -43,7 +45,9 @@ These tests have been developed to test all the functionality that interacts wit
 - psql: postgres database that will simulate the Supabase database.
 - integration-tests: container where the integration tests will run. Before running the tests in runs the goose migrations and initializes the database with test data.
 
-![Testing env diagram](imgs/city-tags-api-testing.png)
+<div style="text-align: center;">
+  <img src="imgs/city-tags-api-testing.png" alt="Architecture diagram">
+</div>
 
 To run the integration tests you can run the following command:
 

@@ -14,13 +14,15 @@ import (
 )
 
 var endpoint string
+var testJWT string
 
 func TestMain(m *testing.M) {
 	serverHost := os.Getenv("SERVER_HOST")
 	serverPort := os.Getenv("SERVER_PORT")
 	endpoint = fmt.Sprintf("http://%s:%s", serverHost, serverPort)
 
-	// Run tests
+	testJWT = os.Getenv("TEST_JWT")
+
 	code := m.Run()
 	os.Exit(code)
 }
@@ -53,8 +55,17 @@ func TestGetCity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpoint := fmt.Sprintf("%s/v0/cities/%s", endpoint, tt.cityId)
-			resp, err := http.Get(endpoint)
+			url := fmt.Sprintf("%s/v0/cities/%s", endpoint, tt.cityId)
+
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", testJWT))
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -179,7 +190,15 @@ func TestGetCities(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := http.Get(tt.URL)
+			req, err := http.NewRequest("GET", tt.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", testJWT))
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}

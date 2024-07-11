@@ -13,12 +13,12 @@ API to be able to consume tags on cities, for example if the humidity is "modera
 
 A DNS record with an SSL certificate is used to be able to set up a connection through HTTPS. An Application Load Balancer (ALB) is registered as a target of this registry. The ALB redirects traffic to the ECS Service where the Go API is deployed. The ECS Service makes use of SSM Parameter Store for environment variables and of ECR to store the different container images of the API. Finally, the API queries the database, in this case Supabase, where the serverless Postgres database is.
 
-The API follows the OpenAPI standard and has the documentation hosted on "/v0/swagger/".
+The API follows the OpenAPI standard and has the documentation hosted on "/v0/swagger/" and it also has authentication through JWT.
 
 You can test a simple call on the development environment with:
 
 ```bash
-curl https://dev.city-tags-api.sityex.com/v0/cities?limit=5
+curl curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJjaXR5LXRhZ3MtYXBpLmRldi5zaXR5ZXguY29tIiwiaWF0IjoxNzIwNzA3NjMxLCJleHAiOjcyNzQ2NzI0MzEsImF1ZCI6IiIsInN1YiI6ImFub255bW91c191c2VyIn0.Mu37OetnJFUvEf-kRtnMl6Yv4wvvAm2qpAcNrbr8UGY" https://dev.city-tags-api.sityex.com/v0/cities?limit=5
 ```
 
 ## Requirements

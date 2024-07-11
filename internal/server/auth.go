@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"city-tags-api/internal/api_errors"
 	"city-tags-api/internal/aws"
@@ -23,7 +24,7 @@ func getTokenAuth() *jwtauth.JWTAuth {
 		encKey = os.Getenv("ENC_KEY")
 	} else {
 		ssm := aws.NewSSM()
-		param := ssm.GetParam(fmt.Sprintf("/city-tags-api/%s/db", env), true)
+		param := ssm.GetParam(fmt.Sprintf("/city-tags-api/%s/secret", strings.ToLower(env)), true)
 		var ok bool
 		encKey, ok = param["ENC_KEY"]
 		if !ok {

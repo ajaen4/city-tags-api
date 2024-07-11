@@ -2,7 +2,7 @@ config:
   aws:region: eu-west-1
   services:
     city-tags-api:
-      build_version: 0.0.4 # city_tags_api version
+      build_version: 0.0.5 # city_tags_api version
       cpu: 256
       memory: 512
       min_count: 1

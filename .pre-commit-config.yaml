@@ -7,13 +7,6 @@ repos:
         language: system
         always_run: true
 
-      - id: add-api-docs
-        name: add-api-docs
-        entry: bash -c 'git add docs/*'
-        language: system
-        always_run: true
-        require_serial: true
-
       - id: go-unit-tests
         name: go-unit-tests
         entry: make unit-tests

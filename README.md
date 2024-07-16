@@ -18,7 +18,7 @@ The API follows the OpenAPI standard and has the documentation hosted on "/v0/sw
 You can test a simple call on the development environment with:
 
 ```bash
-curl curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJjaXR5LXRhZ3MtYXBpLmRldi5zaXR5ZXguY29tIiwiaWF0IjoxNzIwNzA3NjMxLCJleHAiOjcyNzQ2NzI0MzEsImF1ZCI6IiIsInN1YiI6ImFub255bW91c191c2VyIn0.Mu37OetnJFUvEf-kRtnMl6Yv4wvvAm2qpAcNrbr8UGY" https://dev.city-tags-api.sityex.com/v0/cities?limit=5
+curl -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJjaXR5LXRhZ3MtYXBpLmRldi5zaXR5ZXguY29tIiwiaWF0IjoxNzIwNzA3NjMxLCJleHAiOjcyNzQ2NzI0MzEsImF1ZCI6IiIsInN1YiI6ImFub255bW91c191c2VyIn0.Mu37OetnJFUvEf-kRtnMl6Yv4wvvAm2qpAcNrbr8UGY" https://dev.city-tags-api.sityex.com/v0/cities?limit=5
 ```
 
 ## Requirements

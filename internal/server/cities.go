@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-type GetCityResp struct {
+type CityData struct {
 	CityId       int    `json:"city_id"`
 	CityName     string `json:"city_name"`
 	Continent    string `json:"continent"`
@@ -15,8 +15,23 @@ type GetCityResp struct {
 }
 
 type GetCitiesResp struct {
-	Cities []GetCityResp `json:"cities"`
-	Offset int           `json:"offset"`
+	Cities []CityData `json:"cities"`
+	Offset int        `json:"offset"`
+}
+
+type TagsData struct {
+	CityId        int    `json:"city_id"`
+	CloudCoverage string `json:"cloud_coverage"`
+	Humidity      string `json:"humidity"`
+	Temp          string `json:"temperature"`
+	Precipitation string `json:"precipitation"`
+	AirQuality    string `json:"air_quality"`
+	DaylightHours string `json:"daylight_hours"`
+	CitySize      string `json:"city_size"`
+}
+
+type GetTagsResp struct {
+	Tags map[string]string `json:"tags"`
 }
 
 type GetCitiesReq struct {
@@ -78,7 +93,7 @@ func (getCitR *GetCitiesReq) validate(r *http.Request) error {
 // @Produce		json
 // @Param       offset  query int	false	"Offset for pagination"
 // @Param       limit   query int	false	"Limit for pagination"
-// @Success		200 	{object} 	GetCityResp
+// @Success		200 	{object} 	CityData
 // @Failure     500 	{object} 	api_errors.ClientErr
 // @Router		/v0/cities [get]
 func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
@@ -94,11 +109,11 @@ func (api *Api) getCities(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var citiesData = GetCitiesResp{
-		Cities: []GetCityResp{},
+		Cities: []CityData{},
 	}
 	count := 0
 	for rows.Next() {
-		cityData := GetCityResp{}
+		cityData := CityData{}
 		err = rows.Scan(&cityData.CityId, &cityData.CityName, &cityData.Continent, &cityData.Country3Code)
 		if err != nil {
 			return err
@@ -136,7 +151,7 @@ func (getCitR *GetCityReq) validate(r *http.Request) error {
 // @Description	Get city information by providing a specific city id
 // @Accept			json
 // @Produce		json
-// @Success		200 {object} GetCityResp
+// @Success		200 {object} CityData
 // @Failure      500  {object} api_errors.ClientErr
 // @Router			/v0/cities/{cityId} [get]
 func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
@@ -151,7 +166,7 @@ func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var cityData GetCityResp
+	var cityData CityData
 	if rows.Next() {
 		err = rows.Scan(&cityData.CityId, &cityData.CityName, &cityData.Continent, &cityData.Country3Code)
 		if err != nil {
@@ -165,5 +180,70 @@ func (api *Api) getCity(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	respondWithJSON(w, http.StatusOK, cityData)
+	return nil
+}
+
+type GetTagsReq struct {
+	cityId int
+}
+
+func (getTagsR *GetTagsReq) validate(r *http.Request) error {
+	cityIdParam := r.PathValue("cityId")
+	cityId, err := strconv.Atoi(cityIdParam)
+	if cityIdParam == "" || err != nil {
+		return &api_errors.ClientErr{
+			HttpCode: http.StatusBadRequest,
+			Message:  "Parameters not present or invalid",
+			Errors: map[string]string{
+				"cityId": "Not present or invalid",
+			},
+		}
+	}
+	getTagsR.cityId = cityId
+	return nil
+}
+
+// @Summary		Get city tags by city id
+// @Description	Get tags information by providing a specific city id
+// @Accept			json
+// @Produce		json
+// @Success		200 {object} TagsData
+// @Failure      500  {object} api_errors.ClientErr
+// @Router			/v0/cities/{cityId}/tags [get]
+func (api *Api) getTags(w http.ResponseWriter, r *http.Request) error {
+	getTagsReq := GetTagsReq{}
+	err := getTagsReq.validate(r)
+	if err != nil {
+		return err
+	}
+
+	rows, err := api.db.Query("select * from city_tags.city_tags where city_id = $1", getTagsReq.cityId)
+	if err != nil {
+		return err
+	}
+
+	var tagsData TagsData
+	if rows.Next() {
+		err = rows.Scan(
+			&tagsData.CityId,
+			&tagsData.CloudCoverage,
+			&tagsData.Humidity,
+			&tagsData.Temp,
+			&tagsData.Precipitation,
+			&tagsData.AirQuality,
+			&tagsData.DaylightHours,
+			&tagsData.CitySize,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		return &api_errors.ClientErr{
+			HttpCode: http.StatusNotFound,
+			Message:  "City not found",
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, tagsData)
 	return nil
 }

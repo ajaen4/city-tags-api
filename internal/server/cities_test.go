@@ -54,10 +54,10 @@ func TestGetCityReq_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, err := http.NewRequest("GET", "/v0/cities/", nil)
-			req.SetPathValue("cityId", tt.input)
 			if err != nil {
 				t.Fatal(err)
 			}
+			req.SetPathValue("cityId", tt.input)
 
 			GetCityReq := &GetCityReq{}
 			err = GetCityReq.validate(req)
@@ -69,6 +69,40 @@ func TestGetCityReq_validate(t *testing.T) {
 			}
 			if *GetCityReq != tt.expected {
 				t.Errorf("GetCitiesReq.validate(%s) = %v; want %v", tt.input, *GetCityReq, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetTagsReq_validate(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected GetTagsReq
+		isError  bool
+	}{
+		{"incorrect city id", "incorrectCityId", GetTagsReq{}, true},
+		{"correct city id", "3838859", GetTagsReq{cityId: 3838859}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/v0/cities/{cityId}/tags", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.SetPathValue("cityId", tt.input)
+
+			GetTagsReq := &GetTagsReq{}
+			err = GetTagsReq.validate(req)
+			if !tt.isError && err != nil {
+				t.Errorf("Didn't expect an error but one was received")
+			}
+			if tt.isError && err == nil {
+				t.Errorf("Expected error but none was received")
+			}
+			if *GetTagsReq != tt.expected {
+				t.Errorf("GetTagsReq.validate(%s) = %v; want %v", tt.input, *GetTagsReq, tt.expected)
 			}
 		})
 	}

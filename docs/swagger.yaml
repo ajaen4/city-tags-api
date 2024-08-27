@@ -11,7 +11,7 @@ definitions:
       message:
         type: string
     type: object
-  server.GetCityResp:
+  server.CityData:
     properties:
       city_id:
         type: integer
@@ -20,6 +20,25 @@ definitions:
       continent:
         type: string
       country_3_code:
+        type: string
+    type: object
+  server.TagsData:
+    properties:
+      air_quality:
+        type: string
+      city_id:
+        type: integer
+      city_size:
+        type: string
+      cloud_coverage:
+        type: string
+      daylight_hours:
+        type: string
+      humidity:
+        type: string
+      precipitation:
+        type: string
+      temperature:
         type: string
     type: object
 host: city-tags-api.com
@@ -54,7 +73,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.GetCityResp'
+            $ref: '#/definitions/server.CityData'
         "500":
           description: Internal Server Error
           schema:
@@ -71,12 +90,29 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/server.GetCityResp'
+            $ref: '#/definitions/server.CityData'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api_errors.ClientErr'
       summary: Get city by city id
+  /v0/cities/{cityId}/tags:
+    get:
+      consumes:
+      - application/json
+      description: Get tags information by providing a specific city id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.TagsData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api_errors.ClientErr'
+      summary: Get city tags by city id
 securityDefinitions:
   ApiKeyAuth:
     description: Authorization to access the API endpoints

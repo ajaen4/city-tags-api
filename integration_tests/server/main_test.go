@@ -37,7 +37,7 @@ func TestGetCity(t *testing.T) {
 		{
 			"City found",
 			"3838859",
-			server.GetCityResp{
+			server.CityData{
 				CityId: 3838859, CityName: "Río Gallegos", Continent: "South America", Country3Code: "ARG",
 			},
 			false,
@@ -77,13 +77,13 @@ func TestGetCity(t *testing.T) {
 			}
 
 			if !tt.isError {
-				fmtResp := &server.GetCityResp{}
+				fmtResp := &server.CityData{}
 				err = json.Unmarshal(body, fmtResp)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				if *fmtResp != tt.expected.(server.GetCityResp) {
+				if *fmtResp != tt.expected.(server.CityData) {
 					t.Errorf("%s returned %v want %v", endpoint, *fmtResp, tt.expected)
 				}
 			} else {
@@ -112,7 +112,7 @@ func TestGetCities(t *testing.T) {
 			"Get all cities",
 			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=0"),
 			server.GetCitiesResp{
-				Cities: []server.GetCityResp{
+				Cities: []server.CityData{
 					{
 						CityId:       3838859,
 						CityName:     "Río Gallegos",
@@ -139,7 +139,7 @@ func TestGetCities(t *testing.T) {
 			"Test offset",
 			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=1"),
 			server.GetCitiesResp{
-				Cities: []server.GetCityResp{
+				Cities: []server.CityData{
 					{
 						CityId:       3430443,
 						CityName:     "Necochea",
@@ -160,7 +160,7 @@ func TestGetCities(t *testing.T) {
 			"Test limit",
 			fmt.Sprintf("%s/v0/cities%s", endpoint, "?limit=1"),
 			server.GetCitiesResp{
-				Cities: []server.GetCityResp{
+				Cities: []server.CityData{
 					{
 						CityId:       3838859,
 						CityName:     "Río Gallegos",
@@ -175,7 +175,7 @@ func TestGetCities(t *testing.T) {
 			"Test limit and offset",
 			fmt.Sprintf("%s/v0/cities%s", endpoint, "?offset=1&limit=1"),
 			server.GetCitiesResp{
-				Cities: []server.GetCityResp{
+				Cities: []server.CityData{
 					{
 						CityId:       3430443,
 						CityName:     "Necochea",
@@ -223,6 +223,88 @@ func TestGetCities(t *testing.T) {
 
 			if fmtResp.Offset != tt.expected.Offset {
 				t.Errorf("%s returned offset %d want %d", tt.URL, fmtResp.Offset, tt.expected.Offset)
+			}
+		})
+	}
+}
+
+func TestGetTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		cityId   string
+		expected any
+		isError  bool
+	}{
+		{
+			"City found",
+			"3838859",
+			server.TagsData{
+				CityId:        3838859,
+				CloudCoverage: "partly cloudy",
+				Humidity:      "moderate",
+				Temp:          "cold",
+				Precipitation: "moderate",
+				AirQuality:    "good",
+				DaylightHours: "high",
+				CitySize:      "small",
+			},
+			false,
+		},
+		{
+			"City not found",
+			"38388599",
+			api_errors.ClientErr{
+				HttpCode: http.StatusNotFound,
+				Message:  "City not found",
+			},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			url := fmt.Sprintf("%s/v0/cities/%s/tags", endpoint, tt.cityId)
+
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", testJWT))
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !tt.isError {
+				fmtResp := &server.TagsData{}
+				err = json.Unmarshal(body, fmtResp)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if *fmtResp != tt.expected.(server.TagsData) {
+					t.Errorf("%s returned %v want %v", endpoint, *fmtResp, tt.expected)
+				}
+			} else {
+				fmtResp := &api_errors.ClientErr{}
+				err = json.Unmarshal(body, fmtResp)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				expectedErr := tt.expected.(api_errors.ClientErr)
+				if fmtResp.HttpCode != expectedErr.HttpCode || fmtResp.Message != expectedErr.Message {
+					t.Errorf("%s returned %v want %v", endpoint, *fmtResp, tt.expected)
+				}
 			}
 		})
 	}

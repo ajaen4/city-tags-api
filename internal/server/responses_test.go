@@ -17,7 +17,7 @@ func TestRespondWithJSON(t *testing.T) {
 		{
 			"normal response",
 			http.StatusOK,
-			GetCityResp{CityId: 000, CityName: "testName", Continent: "testCont", Country3Code: "testCode"},
+			CityData{CityId: 000, CityName: "testName", Continent: "testCont", Country3Code: "testCode"},
 		},
 		{
 			"client error response",

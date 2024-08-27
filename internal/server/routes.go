@@ -26,6 +26,7 @@ func (api *Api) RegisterRoutes() *chi.Mux {
 
 		r.Get("/cities/{cityId}", NewHandler(api.getCity))
 		r.Get("/cities", NewHandler(api.getCities))
+		r.Get("/cities/{cityId}/tags", NewHandler(api.getTags))
 	})
 
 	return r

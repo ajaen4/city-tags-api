@@ -50,7 +50,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.GetCityResp"
+                            "$ref": "#/definitions/server.CityData"
                         }
                     },
                     "500": {
@@ -76,7 +76,33 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.GetCityResp"
+                            "$ref": "#/definitions/server.CityData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api_errors.ClientErr"
+                        }
+                    }
+                }
+            }
+        },
+        "/v0/cities/{cityId}/tags": {
+            "get": {
+                "description": "Get tags information by providing a specific city id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get city tags by city id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.TagsData"
                         }
                     },
                     "500": {
@@ -107,7 +133,7 @@ const docTemplate = `{
                 }
             }
         },
-        "server.GetCityResp": {
+        "server.CityData": {
             "type": "object",
             "properties": {
                 "city_id": {
@@ -120,6 +146,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "country_3_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.TagsData": {
+            "type": "object",
+            "properties": {
+                "air_quality": {
+                    "type": "string"
+                },
+                "city_id": {
+                    "type": "integer"
+                },
+                "city_size": {
+                    "type": "string"
+                },
+                "cloud_coverage": {
+                    "type": "string"
+                },
+                "daylight_hours": {
+                    "type": "string"
+                },
+                "humidity": {
+                    "type": "string"
+                },
+                "precipitation": {
+                    "type": "string"
+                },
+                "temperature": {
                     "type": "string"
                 }
             }

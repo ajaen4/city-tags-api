@@ -3,7 +3,12 @@ config:
   gcp:region: europe-west1
   services:
     city-tags-api:
+      image:
+        dockerfile: container_imgs/city-tags-api/Dockerfile.api
+        context: container_imgs/city-tags-api/
       build_version: 0.0.7
+      hostedZoneId: "Z04906071ZFGHKG59OJP5"
+      domainName: "city-tags-api.com"
       container_port: 8080
       cpu: 1
       memory: 512Mi

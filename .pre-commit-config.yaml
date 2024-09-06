@@ -3,22 +3,25 @@ repos:
     hooks:
       - id: create-api-docs
         name: create-api-docs
-        entry: make docs
+        entry: bash -c 'cd container_imgs/city-tags-api && make docs'
         language: system
         always_run: true
+        files: ^container_imgs/city-tags-api/
 
       - id: go-unit-tests
         name: go-unit-tests
-        entry: make unit-tests
+        entry: bash -c 'cd container_imgs/city-tags-api && make unit-tests'
         language: system
         always_run: true
+        files: ^container_imgs/city-tags-api/
 
       - id: go-integration-tests
         name: go-integration-tests
-        entry: make integration-tests
+        entry: bash -c 'cd container_imgs/city-tags-api && make integration-tests'
         language: system
         require_serial: true
         always_run: true
+        files: ^container_imgs/city-tags-api/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	apiEndpoint := "https://dev.city-tags-api.sityex.com/v0/cities?limit=10&offset=200"
+	apiEndpoint := "https://city-tags-api.com/v0/cities?limit=10&offset=200"
 
 	for {
 		err := makeRequest(apiEndpoint)

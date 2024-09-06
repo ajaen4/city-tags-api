@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	apiEndpoint := "http://city-tags-api-lb-1927280828.eu-west-1.elb.amazonaws.com/v0/cities?limit=10&offset=200"
+	apiEndpoint := "https://dev.city-tags-api.sityex.com/v0/cities?limit=10&offset=200"
 
 	for {
 		err := makeRequest(apiEndpoint)

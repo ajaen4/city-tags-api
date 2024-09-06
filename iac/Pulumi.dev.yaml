@@ -1,15 +1,19 @@
 config:
-  aws:region: eu-west-1
+  gcp:project: sityex-dev
+  gcp:region: europe-west1
   services:
     city-tags-api:
-      build_version: 0.0.7 # city_tags_api version
-      cpu: 256
-      memory: 512
-      min_count: 1
-      max_count: 10
-      lb_port: 443
+      build_version: 0.0.7
       container_port: 8080
-      hosted_zone_id: Z0759372AQTBEHRHRO9W
+      cpu: 1
+      memory: 512Mi
+      lb_port: 443
+      max_count: 10
+      min_count: 0
+      entrypoint:
+      - "./main"
       env_vars:
-        - type: SSM
-          path: /city-tags-api/dev/db
+      - name: ENV
+        value: DEV
+      - name: SERVER_PORT
+        value: "8080"

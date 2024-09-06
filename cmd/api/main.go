@@ -31,8 +31,8 @@ import (
 //	@description				Authorization to access the API endpoints
 
 func main() {
-	envPort := os.Getenv("SERVER_PORT")
-	port, err := strconv.Atoi(envPort)
+	serverPort := os.Getenv("SERVER_PORT")
+	port, err := strconv.Atoi(serverPort)
 	if err != nil {
 		log.Fatalf("SERVER_PORT env variable error when parsing to integer %s", err.Error())
 	}

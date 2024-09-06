@@ -1,7 +1,7 @@
 package containers
 
 import (
-	"city-tags-api-iac/internal/config"
+	"city-tags-api-iac/internal/input"
 	"context"
 	"fmt"
 	"log"
@@ -18,14 +18,20 @@ type Image struct {
 	name       string
 	repository *artifactregistry.Repository
 	ctx        *pulumi.Context
+	project    string
+	region     string
 	Resource   *dockerbuild.Image
+	imgCfg     input.ImgCfg
 }
 
-func NewImage(ctx *pulumi.Context, cfg *config.ServiceCfg, name string, repository *artifactregistry.Repository) *Image {
+func NewImage(ctx *pulumi.Context, imgCfg input.ImgCfg, project string, region string, name string, repository *artifactregistry.Repository) *Image {
 	return &Image{
 		name:       name,
 		repository: repository,
 		ctx:        ctx,
+		project:    project,
+		region:     region,
+		imgCfg:     imgCfg,
 	}
 }
 
@@ -33,7 +39,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 	imageTag := fmt.Sprintf("%s:%s", img.name, version)
 
 	imageURI := img.repository.Name.ApplyT(func(repoName string) string {
-		return fmt.Sprintf("europe-west1-docker.pkg.dev/sityex-dev/%s/%s", repoName, imageTag)
+		return fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s", img.region, img.project, repoName, imageTag)
 	}).(pulumi.StringInput)
 
 	push := img.repository.Name.ApplyT(func(repoName string) bool {
@@ -47,10 +53,10 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 		img.name,
 		&dockerbuild.ImageArgs{
 			Dockerfile: &dockerbuild.DockerfileArgs{
-				Location: pulumi.String("../Dockerfile.api"),
+				Location: pulumi.String(fmt.Sprintf("../%s", img.imgCfg.Dockerfile)),
 			},
 			Context: &dockerbuild.BuildContextArgs{
-				Location: pulumi.String("../"),
+				Location: pulumi.String(fmt.Sprintf("../%s", img.imgCfg.Context)),
 			},
 			Platforms: dockerbuild.PlatformArray{
 				dockerbuild.Platform_Linux_amd64,
@@ -77,8 +83,8 @@ func (img *Image) imageExists(repoName, version string) bool {
 
 	parent := fmt.Sprintf(
 		"projects/%s/locations/%s/repositories/%s",
-		"sityex-dev",
-		"europe-west1",
+		img.project,
+		img.region,
 		repoName,
 	)
 

@@ -1,10 +1,12 @@
 package containers
 
 import (
-	"city-tags-api-iac/internal/config"
 	"fmt"
 	"log"
 
+	"city-tags-api-iac/internal/input"
+
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/route53"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
@@ -15,10 +17,10 @@ import (
 type service struct {
 	ctx  *pulumi.Context
 	name string
-	cfg  *config.ServiceCfg
+	cfg  *input.ServiceCfg
 }
 
-func NewService(ctx *pulumi.Context, name string, servCfg *config.ServiceCfg) *service {
+func NewService(ctx *pulumi.Context, name string, servCfg *input.ServiceCfg) *service {
 	return &service{
 		ctx:  ctx,
 		name: name,
@@ -70,12 +72,12 @@ func (service *service) createServiceAccount() *serviceaccount.Account {
 }
 
 func (service *service) createService(sa *serviceaccount.Account) {
-	location := "europe-west1"
-
-	repo := NewRepository(service.ctx, service.name)
+	repo := NewRepository(service.ctx, service.name, service.cfg.Region)
 	image := NewImage(
 		service.ctx,
-		service.cfg,
+		service.cfg.ImgCfg,
+		service.cfg.Project,
+		service.cfg.Region,
 		fmt.Sprintf("%s-%s", service.name, service.ctx.Stack()),
 		repo,
 	)
@@ -86,7 +88,7 @@ func (service *service) createService(sa *serviceaccount.Account) {
 		service.name,
 		&cloudrun.ServiceArgs{
 			Name:     pulumi.String(service.name),
-			Location: pulumi.String(location),
+			Location: pulumi.String(service.cfg.Region),
 			Template: &cloudrun.ServiceTemplateArgs{
 				Spec: &cloudrun.ServiceTemplateSpecArgs{
 					ServiceAccountName: sa.Email,
@@ -152,13 +154,62 @@ func (service *service) createService(sa *serviceaccount.Account) {
 		service.ctx,
 		"no-auth",
 		&cloudrun.IamPolicyArgs{
-			Location:   pulumi.String(location),
+			Location:   pulumi.String(service.cfg.Region),
 			Service:    crService.Name,
 			PolicyData: pulumi.String(noauth.PolicyData),
 		})
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	domainMapping := service.createDomainMapping(crService, "city-tags-api.com")
+	service.createDNSRecords(domainMapping)
+}
+
+func (service *service) createDomainMapping(crService *cloudrun.Service, domain string) *cloudrun.DomainMapping {
+	mapping, err := cloudrun.NewDomainMapping(
+		service.ctx,
+		fmt.Sprintf("%s-mapping", domain),
+		&cloudrun.DomainMappingArgs{
+			Name:     pulumi.String(domain),
+			Location: crService.Location,
+			Metadata: &cloudrun.DomainMappingMetadataArgs{
+				Namespace: pulumi.String(service.cfg.Project),
+			},
+			Spec: &cloudrun.DomainMappingSpecArgs{
+				RouteName: crService.Name,
+			},
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return mapping
+}
+
+func (service *service) createDNSRecords(domainMapping *cloudrun.DomainMapping) {
+	ipAddress := domainMapping.Statuses.ApplyT(func(statuses []cloudrun.DomainMappingStatus) string {
+		if len(statuses) > 0 && len(statuses[0].ResourceRecords) > 0 {
+			return *statuses[0].ResourceRecords[0].Rrdata
+		}
+		return ""
+	}).(pulumi.StringOutput)
+
+	_, err := route53.NewRecord(
+		service.ctx,
+		"city-tags-api-root-a",
+		&route53.RecordArgs{
+			ZoneId:  pulumi.String(service.cfg.HostedZoneId),
+			Name:    pulumi.String(""),
+			Type:    pulumi.String("A"),
+			Records: pulumi.StringArray{ipAddress},
+			Ttl:     pulumi.Int(300),
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	service.ctx.Export("cloudRunIPAddress", ipAddress)
 }
 
 func (service *service) parseEnvs() cloudrun.ServiceTemplateSpecContainerEnvArray {

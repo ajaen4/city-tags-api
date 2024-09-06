@@ -1,14 +1,14 @@
 package containers
 
 import (
-	"city-tags-api-iac/internal/config"
+	"city-tags-api-iac/internal/input"
 )
 
 type Services struct {
-	cfg *config.Config
+	cfg *input.Input
 }
 
-func NewServices(cfg *config.Config) *Services {
+func NewServices(cfg *input.Input) *Services {
 	return &Services{
 		cfg: cfg,
 	}

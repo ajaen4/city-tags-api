@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"city-tags-api/internal/api_errors"
-	"city-tags-api/internal/aws"
+	"city-tags-api/internal/gcp"
 
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -23,8 +23,8 @@ func getTokenAuth() *jwtauth.JWTAuth {
 	if env == "LOCAL" {
 		encKey = os.Getenv("ENC_KEY")
 	} else {
-		ssm := aws.NewSSM()
-		param := ssm.GetParam(fmt.Sprintf("/city-tags-api/%s/secret", strings.ToLower(env)), true)
+		sm := gcp.NewSecretManager()
+		param := sm.GetSecret(fmt.Sprintf("city-tags-api-%s-secret", strings.ToLower(env)))
 		var ok bool
 		encKey, ok = param["ENC_KEY"]
 		if !ok {

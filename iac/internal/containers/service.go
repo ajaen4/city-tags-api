@@ -1,475 +1,174 @@
 package containers
 
 import (
-	"city-tags-api-iac/internal/aws_lib"
 	"city-tags-api-iac/internal/config"
-	"encoding/json"
 	"fmt"
 	"log"
 
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/acm"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/appautoscaling"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/cloudwatch"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ec2"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ecs"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/iam"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/lb"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/route53"
-	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/vpc"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
+	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
 type service struct {
-	ctx              *pulumi.Context
-	name             string
-	cfg              *config.ServiceCfg
-	publicSubnetsOut pulumi.AnyOutput
-	vpcIdOut         pulumi.StringOutput
-	roles            map[string]*iam.Role
-	sg               *ec2.SecurityGroup
-	targetGroup      *lb.TargetGroup
+	ctx  *pulumi.Context
+	name string
+	cfg  *config.ServiceCfg
 }
 
-func NewService(ctx *pulumi.Context, name string, servCfg *config.ServiceCfg, roles map[string]*iam.Role) *service {
-	baselineNetRef, err := pulumi.NewStackReference(ctx, "ajaen4/sityex-baseline/main", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+func NewService(ctx *pulumi.Context, name string, servCfg *config.ServiceCfg) *service {
 	return &service{
-		ctx:              ctx,
-		name:             name,
-		cfg:              servCfg,
-		publicSubnetsOut: baselineNetRef.GetOutput(pulumi.String("public_subnet_ids")),
-		vpcIdOut:         baselineNetRef.GetOutput(pulumi.String("vpc_id")).AsStringOutput(),
-		roles:            roles,
+		ctx:  ctx,
+		name: name,
+		cfg:  servCfg,
 	}
 }
 
 func (service *service) deploy() {
-	service.createNetworking()
-	service.createECSService()
+	sa := service.createServiceAccount()
+	service.createService(sa)
 }
 
-func (service *service) createNetworking() {
-	lbSGName := fmt.Sprintf("%s-lb-sg-%s", service.name, service.ctx.Stack())
-	lbSG, err := ec2.NewSecurityGroup(
+func (service *service) createServiceAccount() *serviceaccount.Account {
+	accountId := fmt.Sprintf("%s-sa", service.name)
+	sa, err := serviceaccount.NewAccount(
 		service.ctx,
-		lbSGName,
-		&ec2.SecurityGroupArgs{
-			Name:        pulumi.String(lbSGName),
-			Description: pulumi.String("Controls access to the ALB"),
-			VpcId:       service.vpcIdOut,
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(lbSGName),
-			},
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = vpc.NewSecurityGroupIngressRule(
-		service.ctx,
-		fmt.Sprintf("%s-lb-ingress-%s", service.name, service.ctx.Stack()),
-		&vpc.SecurityGroupIngressRuleArgs{
-			SecurityGroupId: lbSG.ID(),
-			CidrIpv4:        pulumi.String("0.0.0.0/0"),
-			FromPort:        pulumi.Int(service.cfg.LbPort),
-			ToPort:          pulumi.Int(service.cfg.LbPort),
-			IpProtocol:      pulumi.String("tcp"),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = vpc.NewSecurityGroupEgressRule(
-		service.ctx,
-		fmt.Sprintf("%s-lb-egress-%s", service.name, service.ctx.Stack()),
-		&vpc.SecurityGroupEgressRuleArgs{
-			SecurityGroupId: lbSG.ID(),
-			CidrIpv4:        pulumi.String("0.0.0.0/0"),
-			FromPort:        pulumi.Int(0),
-			ToPort:          pulumi.Int(0),
-			IpProtocol:      pulumi.String("-1"),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	srvSGName := fmt.Sprintf("%s-service-sg-%s", service.name, service.ctx.Stack())
-	service.sg, err = ec2.NewSecurityGroup(
-		service.ctx,
-		srvSGName,
-		&ec2.SecurityGroupArgs{
-			Name:        pulumi.String(srvSGName),
-			Description: pulumi.String("Controls access to the ECS Service"),
-			VpcId:       service.vpcIdOut,
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(srvSGName),
-			},
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = vpc.NewSecurityGroupIngressRule(
-		service.ctx,
-		fmt.Sprintf("%s-service-ingress-%s", service.name, service.ctx.Stack()),
-		&vpc.SecurityGroupIngressRuleArgs{
-			SecurityGroupId:           service.sg.ID(),
-			FromPort:                  pulumi.Int(0),
-			ToPort:                    pulumi.Int(0),
-			IpProtocol:                pulumi.String("-1"),
-			ReferencedSecurityGroupId: lbSG.ID(),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = vpc.NewSecurityGroupEgressRule(
-		service.ctx,
-		fmt.Sprintf("%s-service-egress-%s", service.name, service.ctx.Stack()),
-		&vpc.SecurityGroupEgressRuleArgs{
-			SecurityGroupId: service.sg.ID(),
-			CidrIpv4:        pulumi.String("0.0.0.0/0"),
-			FromPort:        pulumi.Int(0),
-			ToPort:          pulumi.Int(0),
-			IpProtocol:      pulumi.String("-1"),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	lbName := fmt.Sprintf("%s-lb-%s", service.name, service.ctx.Stack())
-	serviceLB, err := lb.NewLoadBalancer(
-		service.ctx,
-		lbName,
-		&lb.LoadBalancerArgs{
-			Name:             pulumi.String(lbName),
-			LoadBalancerType: pulumi.String("application"),
-			SecurityGroups:   pulumi.StringArray{lbSG.ID()},
-			SubnetMappings: lb.LoadBalancerSubnetMappingArray{
-				&lb.LoadBalancerSubnetMappingArgs{
-					SubnetId: service.publicSubnetsOut.ApplyT(func(id any) string {
-						return id.([]any)[0].(string)
-					}).(pulumi.StringOutput),
-				},
-				&lb.LoadBalancerSubnetMappingArgs{
-					SubnetId: service.publicSubnetsOut.ApplyT(func(id any) string {
-						return id.([]any)[1].(string)
-					}).(pulumi.StringOutput),
-				},
-			},
-			Internal: pulumi.Bool(false),
+		accountId,
+		&serviceaccount.AccountArgs{
+			AccountId:   pulumi.String(accountId),
+			DisplayName: pulumi.String("Service Account for accessing secrets"),
 		})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	subdomain, err := route53.NewRecord(
-		service.ctx,
-		fmt.Sprintf("%s-subdomain-%s", service.name, service.ctx.Stack()),
-		&route53.RecordArgs{
-			ZoneId: pulumi.String(service.cfg.HostedZoneID),
-			Name:   pulumi.Sprintf("%s.city-tags-api.sityex.com", service.ctx.Stack()),
-			Type:   pulumi.String("A"),
-			Aliases: route53.RecordAliasArray{
-				&route53.RecordAliasArgs{
-					Name:                 serviceLB.DnsName,
-					ZoneId:               serviceLB.ZoneId,
-					EvaluateTargetHealth: pulumi.Bool(true),
-				},
-			},
-		})
-	if err != nil {
-		log.Fatal(err)
+	secretNames := []string{
+		"city-tags-api-dev-db",
+		"city-tags-api-dev-secret",
 	}
 
-	cert, err := acm.NewCertificate(
-		service.ctx,
-		fmt.Sprintf("%s-certificate-%s", service.name, service.ctx.Stack()),
-		&acm.CertificateArgs{
-			DomainName:       subdomain.Fqdn,
-			ValidationMethod: pulumi.String("DNS"),
-			Tags: pulumi.StringMap{
-				"Environment": pulumi.String(service.ctx.Stack()),
-			},
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
+	member := sa.Email.ApplyT(func(email string) string {
+		return fmt.Sprintf("serviceAccount:%s", email)
+	}).(pulumi.StringInput)
 
-	validationRecord, err := route53.NewRecord(
-		service.ctx,
-		fmt.Sprintf("%s-certificate-record-%s", service.name, service.ctx.Stack()),
-		&route53.RecordArgs{
-			ZoneId: pulumi.String(service.cfg.HostedZoneID),
-			Name: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) string {
-				return *options[0].ResourceRecordName
-			}).(pulumi.StringOutput),
-			Type: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) string {
-				return *options[0].ResourceRecordType
-			}).(pulumi.StringOutput),
-			Records: cert.DomainValidationOptions.ApplyT(func(options []acm.CertificateDomainValidationOption) []string {
-				return []string{*options[0].ResourceRecordValue}
-			}).(pulumi.StringArrayOutput),
-			Ttl: pulumi.Int(60),
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Wait for certificate validation
-	certValidation, err := acm.NewCertificateValidation(
-		service.ctx,
-		fmt.Sprintf("%s-certificate-validation-%s", service.name, service.ctx.Stack()),
-		&acm.CertificateValidationArgs{
-			CertificateArn: cert.Arn,
-			ValidationRecordFqdns: pulumi.StringArray{
-				validationRecord.Fqdn,
-			},
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	TargGrName := fmt.Sprintf("%s-target-group-%s", service.name, service.ctx.Stack())
-	service.targetGroup, err = lb.NewTargetGroup(
-		service.ctx,
-		TargGrName,
-		&lb.TargetGroupArgs{
-			Name:       pulumi.String(TargGrName),
-			Port:       pulumi.Int(service.cfg.LbPort),
-			Protocol:   pulumi.String("HTTP"),
-			VpcId:      service.vpcIdOut,
-			TargetType: pulumi.String("ip"),
-			HealthCheck: lb.TargetGroupHealthCheckArgs{
-				Path:               pulumi.String("/ping"),
-				Port:               pulumi.String("traffic-port"),
-				HealthyThreshold:   pulumi.IntPtr(5),
-				UnhealthyThreshold: pulumi.IntPtr(2),
-				Timeout:            pulumi.IntPtr(2),
-				Interval:           pulumi.IntPtr(5),
-				Matcher:            pulumi.String("200"),
-			},
-		},
-		pulumi.DependsOn([]pulumi.Resource{serviceLB}),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = lb.NewListener(
-		service.ctx,
-		fmt.Sprintf("%s-listener-%s", service.name, service.ctx.Stack()),
-		&lb.ListenerArgs{
-			LoadBalancerArn: serviceLB.Arn,
-			Port:            pulumi.Int(service.cfg.LbPort),
-			Protocol:        pulumi.String("HTTPS"),
-			SslPolicy:       pulumi.String("ELBSecurityPolicy-2016-08"),
-			CertificateArn:  cert.Arn,
-			DefaultActions: lb.ListenerDefaultActionArray{
-				&lb.ListenerDefaultActionArgs{
-					Type:           pulumi.String("forward"),
-					TargetGroupArn: service.targetGroup.Arn,
-				},
-			},
-		},
-		pulumi.DependsOn([]pulumi.Resource{certValidation}),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-}
-
-func (service *service) createECSService() {
-	ecrRepo := NewRepository(
-		service.ctx,
-		fmt.Sprintf("%s-repository-%s", service.name, service.ctx.Stack()),
-	)
-	image := NewImage(
-		service.ctx,
-		fmt.Sprintf("%s-image-%s", service.name, service.ctx.Stack()),
-		ecrRepo.EcrRepository,
-	)
-	imageURI := image.PushImage(service.cfg.BuildVersion)
-
-	logGroup, err := cloudwatch.NewLogGroup(
-		service.ctx,
-		fmt.Sprintf("%s-log-group-%s", service.name, service.ctx.Stack()),
-		&cloudwatch.LogGroupArgs{
-			Name:            pulumi.String(fmt.Sprintf("ecs/%s", service.name)),
-			RetentionInDays: pulumi.Int(30),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	clusterName := fmt.Sprintf("%s-cluster-%s", service.name, service.ctx.Stack())
-	cluster, err := ecs.NewCluster(
-		service.ctx,
-		clusterName,
-		&ecs.ClusterArgs{
-			Name: pulumi.String(clusterName),
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	envVars, err := json.Marshal(service.getEnvVars())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	containerDef := pulumi.All(imageURI, logGroup.Name).ApplyT(
-		func(args []any) pulumi.StringOutput {
-			return pulumi.Sprintf(`[
-				{
-					"name": "%s",
-					"image": "%s",
-					"essential": true,
-					"cpu": %d,
-					"memory": %d,
-					"entryPoint": ["./main"],
-					"portMappings": [
-						{
-							"containerPort": %d,
-							"protocol": "tcp"
-						}
-					],
-					"logConfiguration": {
-						"logDriver": "awslogs",
-						"options": {
-							"awslogs-group": "%s",
-							"awslogs-region": "eu-west-1",
-							"awslogs-stream-prefix": "%s-log-stream"
-						}
-					},
-					"environment": %s
-				}
-			]`,
-				service.name,
-				args[0],
-				service.cfg.Cpu,
-				service.cfg.Memory,
-				service.cfg.ContainerPort,
-				args[1],
-				service.name,
-				envVars,
-			)
-		},
-	).(pulumi.StringOutput)
-
-	taskDefName := fmt.Sprintf("%s-task-def-%s", service.name, service.ctx.Stack())
-	taskDef, err := ecs.NewTaskDefinition(
-		service.ctx,
-		taskDefName,
-		&ecs.TaskDefinitionArgs{
-			Family:                  pulumi.String(taskDefName),
-			NetworkMode:             pulumi.String("awsvpc"),
-			ContainerDefinitions:    containerDef,
-			RequiresCompatibilities: pulumi.StringArray{pulumi.String("FARGATE")},
-			Cpu:                     pulumi.StringPtr(fmt.Sprint(service.cfg.Cpu)),
-			Memory:                  pulumi.StringPtr(fmt.Sprint(service.cfg.Memory)),
-			ExecutionRoleArn:        service.roles["exec_role"].Arn,
-			TaskRoleArn:             service.roles["task_role"].Arn,
-		})
-	if err != nil {
-		log.Fatal(taskDef)
-	}
-
-	serviceName := fmt.Sprintf("%s-service-%s", service.name, service.ctx.Stack())
-	ecsService, err := ecs.NewService(
-		service.ctx,
-		serviceName,
-		&ecs.ServiceArgs{
-			Name:           pulumi.String(serviceName),
-			Cluster:        cluster.ID(),
-			TaskDefinition: taskDef.Arn,
-			DesiredCount:   pulumi.Int(service.cfg.MinCount),
-			LaunchType:     pulumi.String("FARGATE"),
-			LoadBalancers: ecs.ServiceLoadBalancerArray{
-				&ecs.ServiceLoadBalancerArgs{
-					TargetGroupArn: service.targetGroup.Arn,
-					ContainerName:  pulumi.String(service.name),
-					ContainerPort:  pulumi.Int(service.cfg.ContainerPort),
-				},
-			},
-			NetworkConfiguration: ecs.ServiceNetworkConfigurationArgs{
-				Subnets:        service.publicSubnetsOut.AsStringArrayOutput(),
-				SecurityGroups: pulumi.StringArray{service.sg.ID()},
-				AssignPublicIp: pulumi.Bool(true),
-			},
-		},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	serviceId := pulumi.Sprintf(
-		"service/%s/%s", clusterName, serviceName,
-	)
-	scalingTarget, err := appautoscaling.NewTarget(
-		service.ctx,
-		fmt.Sprintf("%s-scaling-target-%s", service.name, service.ctx.Stack()),
-		&appautoscaling.TargetArgs{
-			ResourceId:        serviceId,
-			MinCapacity:       pulumi.Int(service.cfg.MinCount),
-			MaxCapacity:       pulumi.Int(service.cfg.MaxCount),
-			ScalableDimension: pulumi.String("ecs:service:DesiredCount"),
-			ServiceNamespace:  pulumi.String("ecs"),
-		},
-		pulumi.DependsOn([]pulumi.Resource{ecsService}),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = appautoscaling.NewPolicy(
-		service.ctx,
-		fmt.Sprintf("%s-scaling-policy-%s", service.name, service.ctx.Stack()),
-		&appautoscaling.PolicyArgs{
-			PolicyType:        pulumi.String("TargetTrackingScaling"),
-			ResourceId:        serviceId,
-			ScalableDimension: pulumi.String("ecs:service:DesiredCount"),
-			ServiceNamespace:  pulumi.String("ecs"),
-			TargetTrackingScalingPolicyConfiguration: &appautoscaling.PolicyTargetTrackingScalingPolicyConfigurationArgs{
-				TargetValue:      pulumi.Float64(70.0),
-				ScaleInCooldown:  pulumi.Int(60),
-				ScaleOutCooldown: pulumi.Int(60),
-				PredefinedMetricSpecification: &appautoscaling.PolicyTargetTrackingScalingPolicyConfigurationPredefinedMetricSpecificationArgs{
-					PredefinedMetricType: pulumi.String("ECSServiceAverageCPUUtilization"),
-				},
-			},
-		},
-		pulumi.DependsOn([]pulumi.Resource{scalingTarget, ecsService}),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-}
-
-func (service *service) getEnvVars() []map[string]string {
-	envVars := []map[string]string{}
-	ssm := aws_lib.NewSSM()
-	for _, envVarCfg := range service.cfg.EnvVars {
-		if envVarCfg.Type == "SSM" {
-			ssmEnvVars := ssm.GetParam(envVarCfg.Path, true)
-			for name, value := range ssmEnvVars {
-				envVars = append(envVars, map[string]string{"name": name, "value": value})
-			}
-		} else {
-			envVars = append(envVars, ssm.GetParam(envVarCfg.Path, true))
+	for _, secretName := range secretNames {
+		_, err := secretmanager.NewSecretIamMember(
+			service.ctx,
+			fmt.Sprintf("%s-access", secretName),
+			&secretmanager.SecretIamMemberArgs{
+				SecretId: pulumi.String(secretName),
+				Role:     pulumi.String("roles/secretmanager.secretAccessor"),
+				Member:   member,
+			})
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
-	return envVars
+	return sa
+}
+
+func (service *service) createService(sa *serviceaccount.Account) {
+	location := "europe-west1"
+
+	repo := NewRepository(service.ctx, service.name)
+	image := NewImage(
+		service.ctx,
+		service.cfg,
+		fmt.Sprintf("%s-%s", service.name, service.ctx.Stack()),
+		repo,
+	)
+	imageUrl := image.PushImage(service.cfg.BuildVersion)
+
+	crService, err := cloudrun.NewService(
+		service.ctx,
+		service.name,
+		&cloudrun.ServiceArgs{
+			Name:     pulumi.String(service.name),
+			Location: pulumi.String(location),
+			Template: &cloudrun.ServiceTemplateArgs{
+				Spec: &cloudrun.ServiceTemplateSpecArgs{
+					ServiceAccountName: sa.Email,
+					Containers: cloudrun.ServiceTemplateSpecContainerArray{
+						&cloudrun.ServiceTemplateSpecContainerArgs{
+							Image:    imageUrl,
+							Envs:     service.parseEnvs(),
+							Commands: pulumi.ToStringArray(service.cfg.Entrypoint),
+							Ports: cloudrun.ServiceTemplateSpecContainerPortArray{
+								&cloudrun.ServiceTemplateSpecContainerPortArgs{
+									ContainerPort: pulumi.Int(service.cfg.ContainerPort),
+								},
+							},
+							Resources: &cloudrun.ServiceTemplateSpecContainerResourcesArgs{
+								Limits: pulumi.StringMap{
+									"cpu": pulumi.Sprintf("%d", service.cfg.Cpu*2),
+								},
+								Requests: pulumi.StringMap{
+									"cpu":    pulumi.Sprintf("%d", service.cfg.Cpu),
+									"memory": pulumi.String(service.cfg.Memory),
+								},
+							},
+							StartupProbe: &cloudrun.ServiceTemplateSpecContainerStartupProbeArgs{
+								HttpGet: &cloudrun.ServiceTemplateSpecContainerStartupProbeHttpGetArgs{
+									Port: pulumi.Int(service.cfg.ContainerPort),
+									Path: pulumi.String("/ping"),
+								},
+							},
+						},
+					},
+				},
+				Metadata: &cloudrun.ServiceTemplateMetadataArgs{
+					Annotations: pulumi.StringMap{
+						"autoscaling.knative.dev/maxScale": pulumi.Sprintf("%d", service.cfg.MaxCount),
+						"autoscaling.knative.dev/minScale": pulumi.Sprintf("%d", service.cfg.MinCount),
+					},
+				},
+			},
+		},
+		pulumi.DependsOn([]pulumi.Resource{image.Resource}),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	noauth, err := organizations.LookupIAMPolicy(
+		service.ctx,
+		&organizations.LookupIAMPolicyArgs{
+			Bindings: []organizations.GetIAMPolicyBinding{
+				{
+					Role: "roles/run.invoker",
+					Members: []string{
+						"allUsers",
+					},
+				},
+			},
+		}, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = cloudrun.NewIamPolicy(
+		service.ctx,
+		"no-auth",
+		&cloudrun.IamPolicyArgs{
+			Location:   pulumi.String(location),
+			Service:    crService.Name,
+			PolicyData: pulumi.String(noauth.PolicyData),
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (service *service) parseEnvs() cloudrun.ServiceTemplateSpecContainerEnvArray {
+	var envs cloudrun.ServiceTemplateSpecContainerEnvArray
+	for _, env := range service.cfg.EnvVars {
+		env_var := &cloudrun.ServiceTemplateSpecContainerEnvArgs{
+			Name:  pulumi.String(env.Name),
+			Value: pulumi.String(env.Value),
+		}
+		envs = append(envs, env_var)
+	}
+	return envs
 }

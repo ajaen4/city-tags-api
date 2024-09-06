@@ -1,11 +1,13 @@
 package database
 
 import (
+	"city-tags-api/internal/gcp"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,16 +21,16 @@ type Service interface {
 }
 
 type database struct {
-	pool *pgxpool.Pool
+	pool     *pgxpool.Pool
+	db_name  string
+	password string
+	username string
+	port     string
+	host     string
 }
 
 var (
 	env        = os.Getenv("ENV")
-	db_name    = os.Getenv("DB_NAME")
-	password   = os.Getenv("DB_PASSWORD")
-	username   = os.Getenv("DB_USERNAME")
-	port       = os.Getenv("DB_PORT")
-	host       = os.Getenv("DB_HOST")
 	dbInstance *database
 )
 
@@ -38,11 +40,33 @@ func New() Service {
 	}
 
 	var sslmode string
+	var param map[string]string
+	var (
+		db_name,
+		password,
+		username,
+		port,
+		host string
+	)
+
 	if env == "LOCAL" {
 		sslmode = "disable"
+		db_name = os.Getenv("DB_NAME")
+		password = os.Getenv("DB_PASSWORD")
+		username = os.Getenv("DB_USERNAME")
+		port = os.Getenv("DB_PORT")
+		host = os.Getenv("DB_HOST")
 	} else {
 		sslmode = "require"
+		sm := gcp.NewSecretManager()
+		param = sm.GetSecret(fmt.Sprintf("city-tags-api-%s-db", strings.ToLower(env)))
+		db_name = param["DB_NAME"]
+		password = param["DB_PASSWORD"]
+		username = param["DB_USERNAME"]
+		port = param["DB_PORT"]
+		host = param["DB_HOST"]
 	}
+
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		username,
@@ -64,18 +88,23 @@ func New() Service {
 	}
 
 	dbInstance = &database{
-		pool: pool,
+		pool:     pool,
+		db_name:  db_name,
+		password: password,
+		username: username,
+		port:     port,
+		host:     host,
 	}
 	return dbInstance
 }
 
-func (s *database) Health() map[string]string {
+func (db *database) Health() map[string]string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	stats := make(map[string]string)
 
-	err := s.pool.Ping(ctx)
+	err := db.pool.Ping(ctx)
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
@@ -86,7 +115,7 @@ func (s *database) Health() map[string]string {
 	stats["status"] = "up"
 	stats["message"] = "It's healthy"
 
-	poolStats := s.pool.Stat()
+	poolStats := db.pool.Stat()
 	stats["total_connections"] = strconv.Itoa(int(poolStats.TotalConns()))
 	stats["idle_connections"] = strconv.Itoa(int(poolStats.IdleConns()))
 	stats["used_connections"] = strconv.Itoa(int(poolStats.AcquiredConns()))
@@ -94,12 +123,12 @@ func (s *database) Health() map[string]string {
 	return stats
 }
 
-func (s *database) Close() error {
-	log.Printf("Disconnected from database: %s", db_name)
-	s.pool.Close()
+func (db *database) Close() error {
+	log.Printf("Disconnected from database: %s", db.db_name)
+	db.pool.Close()
 	return nil
 }
 
-func (s *database) Query(query string, args ...interface{}) (pgx.Rows, error) {
-	return s.pool.Query(context.Background(), query, args...)
+func (db *database) Query(query string, args ...interface{}) (pgx.Rows, error) {
+	return db.pool.Query(context.Background(), query, args...)
 }

@@ -4,7 +4,7 @@
         "ref": "sample-head-ref"
       },
       "base": {
-        "ref": "main"
+        "ref": "dev"
       }
     }
 }

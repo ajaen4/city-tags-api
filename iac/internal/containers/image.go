@@ -18,19 +18,15 @@ type Image struct {
 	name       string
 	repository *artifactregistry.Repository
 	ctx        *pulumi.Context
-	project    string
-	region     string
 	Resource   *dockerbuild.Image
 	imgCfg     input.ImgCfg
 }
 
-func NewImage(ctx *pulumi.Context, imgCfg input.ImgCfg, project string, region string, name string, repository *artifactregistry.Repository) *Image {
+func NewImage(ctx *pulumi.Context, imgCfg input.ImgCfg, name string, repository *artifactregistry.Repository) *Image {
 	return &Image{
 		name:       name,
 		repository: repository,
 		ctx:        ctx,
-		project:    project,
-		region:     region,
 		imgCfg:     imgCfg,
 	}
 }
@@ -39,7 +35,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 	imageTag := fmt.Sprintf("%s:%s", img.name, version)
 
 	imageURI := img.repository.Name.ApplyT(func(repoName string) string {
-		return fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s", img.region, img.project, repoName, imageTag)
+		return fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s", input.GetRegion(), input.GetProject(), repoName, imageTag)
 	}).(pulumi.StringInput)
 
 	push := img.repository.Name.ApplyT(func(repoName string) bool {
@@ -83,8 +79,8 @@ func (img *Image) imageExists(repoName, version string) bool {
 
 	parent := fmt.Sprintf(
 		"projects/%s/locations/%s/repositories/%s",
-		img.project,
-		img.region,
+		input.GetProject(),
+		input.GetRegion(),
 		repoName,
 	)
 

@@ -72,13 +72,11 @@ func (service *service) createServiceAccount() *serviceaccount.Account {
 }
 
 func (service *service) createService(sa *serviceaccount.Account) {
-	repo := NewRepository(service.ctx, service.name, service.cfg.Region)
+	repo := NewRepository(service.ctx, service.name, input.GetRegion())
 	image := NewImage(
 		service.ctx,
 		service.cfg.ImgCfg,
-		service.cfg.Project,
-		service.cfg.Region,
-		fmt.Sprintf("%s-%s", service.name, service.ctx.Stack()),
+		service.name,
 		repo,
 	)
 	imageUrl := image.PushImage(service.cfg.BuildVersion)
@@ -88,7 +86,7 @@ func (service *service) createService(sa *serviceaccount.Account) {
 		service.name,
 		&cloudrun.ServiceArgs{
 			Name:     pulumi.String(service.name),
-			Location: pulumi.String(service.cfg.Region),
+			Location: pulumi.String(input.GetRegion()),
 			Template: &cloudrun.ServiceTemplateArgs{
 				Spec: &cloudrun.ServiceTemplateSpecArgs{
 					ServiceAccountName: sa.Email,
@@ -154,7 +152,7 @@ func (service *service) createService(sa *serviceaccount.Account) {
 		service.ctx,
 		"no-auth",
 		&cloudrun.IamPolicyArgs{
-			Location:   pulumi.String(service.cfg.Region),
+			Location:   pulumi.String(input.GetRegion()),
 			Service:    crService.Name,
 			PolicyData: pulumi.String(noauth.PolicyData),
 		})
@@ -162,19 +160,19 @@ func (service *service) createService(sa *serviceaccount.Account) {
 		log.Fatal(err)
 	}
 
-	domainMapping := service.createDomainMapping(crService, "city-tags-api.com")
+	domainMapping := service.createDomainMapping(crService)
 	service.createDNSRecords(domainMapping)
 }
 
-func (service *service) createDomainMapping(crService *cloudrun.Service, domain string) *cloudrun.DomainMapping {
+func (service *service) createDomainMapping(crService *cloudrun.Service) *cloudrun.DomainMapping {
 	mapping, err := cloudrun.NewDomainMapping(
 		service.ctx,
-		fmt.Sprintf("%s-mapping", domain),
+		fmt.Sprintf("%s-mapping", service.cfg.DomainName),
 		&cloudrun.DomainMappingArgs{
-			Name:     pulumi.String(domain),
+			Name:     pulumi.String(service.cfg.DomainName),
 			Location: crService.Location,
 			Metadata: &cloudrun.DomainMappingMetadataArgs{
-				Namespace: pulumi.String(service.cfg.Project),
+				Namespace: pulumi.String(input.GetProject()),
 			},
 			Spec: &cloudrun.DomainMappingSpecArgs{
 				RouteName: crService.Name,

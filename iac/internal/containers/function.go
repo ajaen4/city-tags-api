@@ -48,7 +48,7 @@ func (function *function) createServiceAccount() *serviceaccount.Account {
 		function.ctx,
 		fmt.Sprintf("%s-invoker", function.name),
 		&projects.IAMMemberArgs{
-			Project: pulumi.String(function.cfg.Project),
+			Project: pulumi.String(input.GetProject()),
 			Role:    pulumi.String("roles/run.invoker"),
 			Member:  pulumi.Sprintf("serviceAccount:%s", sa.Email),
 		})
@@ -60,13 +60,11 @@ func (function *function) createServiceAccount() *serviceaccount.Account {
 }
 
 func (function *function) createFunction(sa *serviceaccount.Account) {
-	repo := NewRepository(function.ctx, function.name, function.cfg.Region)
+	repo := NewRepository(function.ctx, function.name, input.GetRegion())
 	image := NewImage(
 		function.ctx,
 		function.cfg.ImgCfg,
-		function.cfg.Project,
-		function.cfg.Region,
-		fmt.Sprintf("%s-%s", function.name, function.ctx.Stack()),
+		function.name,
 		repo,
 	)
 	imageUrl := image.PushImage(function.cfg.BuildVersion)
@@ -76,7 +74,7 @@ func (function *function) createFunction(sa *serviceaccount.Account) {
 		function.name,
 		&cloudrunv2.JobArgs{
 			Name:     pulumi.String(function.name),
-			Location: pulumi.String(function.cfg.Region),
+			Location: pulumi.String(input.GetRegion()),
 			Template: &cloudrunv2.JobTemplateArgs{
 				Template: &cloudrunv2.JobTemplateTemplateArgs{
 					Containers: cloudrunv2.JobTemplateTemplateContainerArray{
@@ -101,15 +99,15 @@ func (function *function) createFunction(sa *serviceaccount.Account) {
 		fmt.Sprintf("%s-scheduler", function.name),
 		&cloudscheduler.JobArgs{
 			Name:     pulumi.String(fmt.Sprintf("%s-scheduler", function.name)),
-			Project:  pulumi.String(function.cfg.Project),
-			Region:   pulumi.String(function.cfg.Region),
+			Project:  pulumi.String(input.GetProject()),
+			Region:   pulumi.String(input.GetRegion()),
 			Schedule: pulumi.String("0 0 * * 0"),
 			TimeZone: pulumi.String("Etc/UTC"),
 			HttpTarget: &cloudscheduler.JobHttpTargetArgs{
 				HttpMethod: pulumi.String("POST"),
 				Uri: pulumi.Sprintf("https://%s-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/%s/jobs/%s:run",
-					function.cfg.Region,
-					function.cfg.Project,
+					input.GetRegion(),
+					input.GetProject(),
 					function.name,
 				),
 				OauthToken: &cloudscheduler.JobHttpTargetOauthTokenArgs{

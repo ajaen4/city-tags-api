@@ -9,7 +9,7 @@ import (
 	registryClient "cloud.google.com/go/artifactregistry/apiv1"
 	artifactregistrypb "cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"github.com/pulumi/pulumi-docker-build/sdk/go/dockerbuild"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/artifactregistry"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/artifactregistry"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"google.golang.org/api/iterator"
 )

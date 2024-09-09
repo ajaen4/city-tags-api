@@ -7,10 +7,10 @@ import (
 	"city-tags-api-iac/internal/input"
 
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/route53"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudrun"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/organizations"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/secretmanager"
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/serviceaccount"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/cloudrun"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/organizations"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/secretmanager"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 

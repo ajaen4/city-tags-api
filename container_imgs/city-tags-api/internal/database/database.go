@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -59,7 +58,7 @@ func New() Service {
 	} else {
 		sslmode = "require"
 		sm := gcp.NewSecretManager()
-		param = sm.GetSecret(fmt.Sprintf("city-tags-api-%s-db", strings.ToLower(env)))
+		param = sm.GetSecret("city-tags-api-db")
 		db_name = param["DB_NAME"]
 		password = param["DB_PASSWORD"]
 		username = param["DB_USERNAME"]

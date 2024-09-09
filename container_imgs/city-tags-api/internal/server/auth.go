@@ -1,11 +1,9 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"city-tags-api/internal/api_errors"
 	"city-tags-api/internal/gcp"
@@ -24,7 +22,7 @@ func getTokenAuth() *jwtauth.JWTAuth {
 		encKey = os.Getenv("ENC_KEY")
 	} else {
 		sm := gcp.NewSecretManager()
-		param := sm.GetSecret(fmt.Sprintf("city-tags-api-%s-secret", strings.ToLower(env)))
+		param := sm.GetSecret("city-tags-api-secret")
 		var ok bool
 		encKey, ok = param["ENC_KEY"]
 		if !ok {

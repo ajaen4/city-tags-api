@@ -47,8 +47,8 @@ func (service *service) createServiceAccount() *serviceaccount.Account {
 	}
 
 	secretNames := []string{
-		"city-tags-api-dev-db",
-		"city-tags-api-dev-secret",
+		"city-tags-api-db",
+		"city-tags-api-secret",
 	}
 
 	member := sa.Email.ApplyT(func(email string) string {

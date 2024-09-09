@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"strings"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -32,11 +30,9 @@ func NewSecretManager() *SecretManager {
 func (sm *SecretManager) GetSecret(secretName string) map[string]string {
 	ctx := context.Background()
 
-	env := os.Getenv("ENV")
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf(
-			"projects/sityex-%s/secrets/%s/versions/latest",
-			strings.ToLower(env),
+			"projects/sityex-dev/secrets/%s/versions/latest",
 			secretName,
 		),
 	}

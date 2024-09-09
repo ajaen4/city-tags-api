@@ -51,7 +51,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: City Tags API
-  version: 0.0.7
+  version: 0.0.8
 paths:
   /v0/cities:
     get:

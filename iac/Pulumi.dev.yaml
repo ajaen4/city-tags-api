@@ -6,7 +6,7 @@ config:
       image:
         dockerfile: container_imgs/city-tags-api/Dockerfile.api
         context: container_imgs/city-tags-api/
-      build_version: 0.0.7
+      build_version: 0.0.7 #city_tags_api version
       hostedZoneId: "Z04906071ZFGHKG59OJP5"
       domainName: "city-tags-api.com"
       container_port: 8080
@@ -22,3 +22,18 @@ config:
         value: DEV
       - name: SERVER_PORT
         value: "8080"
+  functions:
+    keep-supabase-up:
+      image:
+        dockerfile: container_imgs/keep-supabase-up/Dockerfile
+        context: container_imgs/keep-supabase-up/
+      build_version: 0.0.2 # keep_supabase_up version
+      cpu: 1
+      memory: 128
+      env_vars:
+      - name: ENDPOINT
+        value: https://city-tags-api.com/v0/cities?limit=10&offset=200
+      - name: JWT
+        value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJjaXR5LXRhZ3MtYXBpLmRldi5zaXR5ZXguY29tIiwiaWF0IjoxNzIwNzA3NjMxLCJleHAiOjcyNzQ2NzI0MzEsImF1ZCI6IiIsInN1YiI6ImFub255bW91c191c2VyIn0.Mu37OetnJFUvEf-kRtnMl6Yv4wvvAm2qpAcNrbr8UGY
+      entrypoint:
+      - "./main"

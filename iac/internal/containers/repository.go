@@ -3,7 +3,7 @@ package containers
 import (
 	"log"
 
-	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/artifactregistry"
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/artifactregistry"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 

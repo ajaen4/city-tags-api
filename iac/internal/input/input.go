@@ -75,7 +75,7 @@ type FunctionCfg struct {
 	Region       string
 	ImgCfg       ImgCfg   `json:"image"`
 	BuildVersion string   `json:"build_version"`
-	Cpu          int      `json:"cpu"`
-	Memory       string   `json:"memory"`
+	Memory       int      `json:"memory"`
 	EnvVars      []EnvVar `json:"env_vars"`
+	Entrypoint   []string `json:"entrypoint"`
 }

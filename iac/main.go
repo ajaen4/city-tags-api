@@ -11,11 +11,8 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		cfg := input.Load(ctx)
 
-		services := containers.NewServices(cfg)
-		services.Deploy()
-
-		funcs := containers.NewFunctions(cfg)
-		funcs.Deploy()
+		containers.NewServices(cfg)
+		containers.NewFunctions(cfg)
 
 		return nil
 	})

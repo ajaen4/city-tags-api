@@ -11,6 +11,7 @@ import (
 	"github.com/pulumi/pulumi-docker-build/sdk/go/dockerbuild"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/artifactregistry"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumiverse/pulumi-time/sdk/go/time"
 	"google.golang.org/api/iterator"
 )
 
@@ -44,6 +45,17 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 	}).(pulumi.BoolInput)
 
 	var err error
+	sleep, err := time.NewSleep(
+		img.ctx,
+		fmt.Sprintf("%s-sleep-image", img.name),
+		&time.SleepArgs{
+			CreateDuration: pulumi.String("5s"),
+		},
+		pulumi.DependsOn([]pulumi.Resource{img.repository}),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create sleep resource: %v", err)
+	}
 	img.Resource, err = dockerbuild.NewImage(
 		img.ctx,
 		img.name,
@@ -61,6 +73,7 @@ func (img *Image) PushImage(version string) pulumi.StringInput {
 			Tags: pulumi.StringArray{imageURI},
 			Push: pulumi.BoolInput(push),
 		},
+		pulumi.DependsOn([]pulumi.Resource{sleep}),
 	)
 	if err != nil {
 		log.Fatal(err)

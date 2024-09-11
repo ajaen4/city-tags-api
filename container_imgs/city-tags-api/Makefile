@@ -34,7 +34,7 @@ create-migration: setup
 		exit 1; \
 	fi
 	@echo "Creating migration: $(MIGRATION_NAME)"
-	@goose -dir $(GOOSE_MIGRATION_DIR) create $(MIGRATION_NAME) sql
+	@goose -dir $(MIGRATION_DIR) create $(MIGRATION_NAME) sql
 
 # GOOSE_DBSTRING must have "" around it so the make file interprets correctly certain special characters
 run-migrations: setup

@@ -122,7 +122,7 @@ func (function *function) createFunction(sa *serviceaccount.Account) {
 			Name:     pulumi.String(fmt.Sprintf("%s-scheduler", function.name)),
 			Project:  pulumi.String(input.GetProject()),
 			Region:   pulumi.String(input.GetRegion()),
-			Schedule: pulumi.String("0 0 * * 0"),
+			Schedule: pulumi.String(function.cfg.ScheduleExp),
 			TimeZone: pulumi.String("Etc/UTC"),
 			HttpTarget: &cloudscheduler.JobHttpTargetArgs{
 				HttpMethod: pulumi.String("POST"),

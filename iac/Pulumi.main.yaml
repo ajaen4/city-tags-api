@@ -30,6 +30,7 @@ config:
       build_version: 0.0.2 # keep_supabase_up version
       cpu: 1
       memory: 128
+      schedule_exp: "0 0 * * *"
       env_vars:
       - name: ENDPOINT
         value: https://city-tags-api.com/v0/cities?limit=10&offset=200
